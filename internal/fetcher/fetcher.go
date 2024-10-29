@@ -27,6 +27,7 @@ func fetchByUrl(url string) (payload []byte, err error) {
 	if err != nil {
 		return []byte{}, fmt.Errorf("Couldn't post request, err: %v", err)
 	}
+	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -58,7 +59,7 @@ func fetchGlovoItemsByFilter(baseURL string, filter string) (restaurants []strin
 	fullURL := baseURL + "&filter=" + filter
 	respBody, err := fetchByUrl(fullURL)
 
-	var glovoResp glovoItemsResponse
+	var glovoResp glovoStoresResponse
 	err = json.Unmarshal(respBody, &glovoResp)
 	if err != nil {
 		log.Println(fullURL)
