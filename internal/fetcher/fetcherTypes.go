@@ -47,7 +47,7 @@ type glovoStoresResponse struct {
 					CartTotalElements           interface{}   `json:"cartTotalElements"`
 					Note                        interface{}   `json:"note"`
 					Distance                    string        `json:"distance"`
-					SetressID                   int           `json:"addressId"`
+					AddressID                   int           `json:"addressId"`
 					Location                    interface{}   `json:"location"`
 					CustomDescriptionAllowed    bool          `json:"customDescriptionAllowed"`
 					ProductsInformationText     interface{}   `json:"productsInformationText"`
@@ -111,7 +111,7 @@ type glovoStoresResponse struct {
 	WallAvailabilityData interface{}   `json:"wallAvailabilityData"`
 }
 
-type glovoItemsResponse struct {
+type GlovoItemsResponse struct {
 	Data struct {
 		Body []struct {
 			Data struct {

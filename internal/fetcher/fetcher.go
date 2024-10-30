@@ -7,6 +7,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/google/uuid"
+	"github.com/thrashdev/foodsearch/internal/models"
 )
 
 func fetchByUrl(url string) (payload []byte, err error) {
@@ -55,7 +58,7 @@ func fetchGlovoFilters(filtersURL string) (filters []string, err error) {
 	return filters, nil
 }
 
-func fetchGlovoItemsByFilter(baseURL string, filter string) (restaurants []string, err error) {
+func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []string, err error) {
 	fullURL := baseURL + "&filter=" + filter
 	respBody, err := fetchByUrl(fullURL)
 
@@ -81,7 +84,7 @@ func FetchGlovoItems(baseURL string, filtersURL string) (allRestaurants []string
 	}
 
 	for _, f := range filters {
-		restaurantsByFilter, err := fetchGlovoItemsByFilter(baseURL, url.QueryEscape(f))
+		restaurantsByFilter, err := fetchGlovoStoresByFilter(baseURL, url.QueryEscape(f))
 		if err != nil {
 			return []string{}, fmt.Errorf("Couldn't fetch by filter: %s. Error :%v", f, err)
 		}
@@ -89,4 +92,21 @@ func FetchGlovoItems(baseURL string, filtersURL string) (allRestaurants []string
 		allRestaurants = append(allRestaurants, restaurantsByFilter...)
 	}
 	return allRestaurants, nil
+}
+
+func GetGlovoStores(resp glovoStoresResponse) ([]models.GlovoStore, error) {
+	result := []models.GlovoStore{}
+	for _, item := range resp.Elements {
+		store := models.GlovoStore{ID: uuid.New(),
+			GlovoStoreID:    item.SingleData.StoreData.Store.ID,
+			GlovoAddressID:  item.SingleData.StoreData.Store.AddressID,
+			Name:            item.SingleData.StoreData.Store.Name,
+			DeliveryFee:     item.SingleData.StoreData.Store.ServiceFee,
+			DeliveryFeeInfo: item.SingleData.StoreData.Store.DeliveryFeeInfo,
+		}
+
+		result = append(result, store)
+	}
+
+	return result, nil
 }
