@@ -86,7 +86,7 @@ type glovoStoresResponse struct {
 					ItemsType                string      `json:"itemsType"`
 					SuggestionKeywords       []string    `json:"suggestionKeywords"`
 					PhoneNumber              string      `json:"phoneNumber"`
-					Setress                  string      `json:"address"`
+					Address                  string      `json:"address"`
 					ViewType                 string      `json:"viewType"`
 					Sponsored                bool        `json:"sponsored"`
 					FeesPricingCalculationID string      `json:"feesPricingCalculationId"`

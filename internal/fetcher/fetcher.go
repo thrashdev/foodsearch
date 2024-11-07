@@ -77,7 +77,7 @@ func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []stri
 
 }
 
-func FetchGlovoItems(baseURL string, filtersURL string) (allRestaurants []string, err error) {
+func FetchGlovoStores(baseURL string, filtersURL string) (allRestaurants []string, err error) {
 	filters, err := fetchGlovoFilters(filtersURL)
 	if err != nil {
 		return []string{}, fmt.Errorf("Couldn't get filters, err: %v", err)
@@ -94,15 +94,17 @@ func FetchGlovoItems(baseURL string, filtersURL string) (allRestaurants []string
 	return allRestaurants, nil
 }
 
-func GetGlovoStores(resp glovoStoresResponse) ([]models.GlovoStore, error) {
+func GlovoRespToGlovoStores(resp glovoStoresResponse) ([]models.GlovoStore, error) {
 	result := []models.GlovoStore{}
 	for _, item := range resp.Elements {
-		store := models.GlovoStore{ID: uuid.New(),
-			GlovoStoreID:    item.SingleData.StoreData.Store.ID,
-			GlovoAddressID:  item.SingleData.StoreData.Store.AddressID,
-			Name:            item.SingleData.StoreData.Store.Name,
-			DeliveryFee:     item.SingleData.StoreData.Store.ServiceFee,
-			DeliveryFeeInfo: item.SingleData.StoreData.Store.DeliveryFeeInfo,
+		store := models.GlovoStore{
+			Store: models.Store{
+				ID:          uuid.New(),
+				Name:        item.SingleData.StoreData.Store.Name,
+				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
+				Address:     item.SingleData.StoreData.Store.Address},
+			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
+			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
 		}
 
 		result = append(result, store)

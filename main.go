@@ -16,7 +16,7 @@ func main() {
 	}
 	glovoURL := os.Getenv("glovo_url")
 	glovoFiltersURL := os.Getenv("glovo_filters_url")
-	restaurants, err := fetcher.FetchGlovoItems(glovoURL, glovoFiltersURL)
+	restaurants, err := fetcher.FetchGlovoStores(glovoURL, glovoFiltersURL)
 	if err != nil {
 		fmt.Println(err)
 	}

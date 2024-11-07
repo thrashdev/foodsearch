@@ -4,16 +4,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type Store struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"store_name"`
+	Address     string    `json:"address"`
+	DeliveryFee float64   `json:"delivery_fee"`
+}
+
 type GlovoStore struct {
-	ID              uuid.UUID `json:"id"`
-	GlovoStoreID    int       `json:"glovo_id"`
-	GlovoAddressID  int       `json:"glovo_address_id"`
-	Name            string    `json:"store_name"`
-	DeliveryFee     float64   `json:"serviceFee"`
-	DeliveryFeeInfo struct {
-		Fee   float64 `json:"fee"`
-		Style string  `json:"style"`
-	} `json:"deliveryFeeInfo"`
+	Store
+	GlovoStoreID   int `json:"glovo_id"`
+	GlovoAddressID int `json:"glovo_address_id"`
 }
 
 type GlovoDish struct {
