@@ -14,6 +14,18 @@ import (
 	"github.com/thrashdev/foodsearch/internal/models"
 )
 
+func findMaxDiscountRate(promos []glovoPromotion) float64 {
+	max := 0.0
+	for _, promo := range promos {
+		if promo.Percentage > max {
+			fmt.Printf("Processing %v\n", promo)
+			max = promo.Percentage
+		}
+	}
+	// fmt.Printf("Returning %v\n", max)
+	return max
+}
+
 func fetchByUrl(url string) (payload []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -116,7 +128,7 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.G
 		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
 	}
 
-	var dishesResponse GlovoDishesResponse
+	var dishesResponse glovoDishesResponse
 	err = json.Unmarshal(responsePayload, &dishesResponse)
 	if err != nil {
 		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
@@ -125,12 +137,16 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.G
 	dishes := []models.GlovoDish{}
 	for _, elem := range dishesResponse.Data.Body {
 		for _, dishItem := range elem.Data.Elements {
+			discount := findMaxDiscountRate(dishItem.Data.Promotions)
 			dishes = append(dishes, models.GlovoDish{
-				GlovoID:     int(dishItem.Data.ID),
-				Name:        dishItem.Data.Name,
-				Description: dishItem.Data.Description,
-				Price:       dishItem.Data.Price,
-				PriceInfo:   dishItem.Data.PriceInfo,
+				GlovoID: int(dishItem.Data.ID),
+				Dish: models.Dish{
+					ID:          uuid.New(),
+					Name:        dishItem.Data.Name,
+					Description: dishItem.Data.Description,
+					Price:       dishItem.Data.Price,
+					MaxDiscount: discount,
+				},
 			})
 
 		}

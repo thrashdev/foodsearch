@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
+	"github.com/thrashdev/foodsearch/internal/models"
 	// "github.com/thrashdev/foodsearch/internal/models"
 )
 
@@ -22,7 +23,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	dishes, err := fetcher.FetchGlovoDishes(restaurants[0], glovoDishesURL)
+	rest := models.GlovoRestaurant{}
+	for _, r := range restaurants {
+		if r.Name == "WoK Lagman" {
+			rest = r
+		}
+	}
+	dishes, err := fetcher.FetchGlovoDishes(rest, glovoDishesURL)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -36,7 +43,7 @@ func main() {
 	// 	dishes = append(dishes, restDishes...)
 	// }
 
-	for _, d := range dishes {
-		fmt.Println(d)
+	for _, _ = range dishes {
+
 	}
 }

@@ -12,6 +12,20 @@ type Restaurant struct {
 	PhoneNumber string    `json:"phoneNumber"`
 }
 
+type Dish struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Price       float64   `json:"price"`
+	MaxDiscount float64   `json:"max_discount"`
+}
+
+type DishCategory struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+}
+
 type GlovoRestaurant struct {
 	Restaurant
 	GlovoStoreID   int `json:"glovo_id"`
@@ -19,27 +33,6 @@ type GlovoRestaurant struct {
 }
 
 type GlovoDish struct {
-	GlovoID     int     `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	PriceInfo   struct {
-		Amount       float64 `json:"amount"`
-		CurrencyCode string  `json:"currencyCode"`
-		DisplayText  string  `json:"displayText"`
-	} `json:"priceInfo"`
-	CuisineID int `json:"cuisine_id"`
-	// Promotion struct {
-	// 	ProductID   int64   `json:"productId"`
-	// 	PromotionID int     `json:"promotionId"`
-	// 	Title       string  `json:"title"`
-	// 	Type        string  `json:"type"`
-	// 	Percentage  float64 `json:"percentage"`
-	// 	Price       float64 `json:"price"`
-	// 	PriceInfo   struct {
-	// 		Amount       float64 `json:"amount"`
-	// 		CurrencyCode string  `json:"currencyCode"`
-	// 		DisplayText  string  `json:"displayText"`
-	// 	} `json:"priceInfo"`
-	// } `json:"promotion"`
+	Dish
+	GlovoID int `json:"id"`
 }

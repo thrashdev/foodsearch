@@ -43,7 +43,7 @@ type glovoRestaurantsResponse struct {
 	} `json:"elements"`
 }
 
-type GlovoDishesResponse struct {
+type glovoDishesResponse struct {
 	Data struct {
 		Body []struct {
 			Data struct {
@@ -85,44 +85,32 @@ type GlovoDishesResponse struct {
 							MultipleSelection  bool `json:"multipleSelection"`
 							CollapsedByDefault bool `json:"collapsedByDefault"`
 						} `json:"attributeGroups"`
-						Promotion struct {
-							ProductID   int64   `json:"productId"`
-							PromotionID int     `json:"promotionId"`
-							Title       string  `json:"title"`
-							Type        string  `json:"type"`
-							Percentage  float64 `json:"percentage"`
-							Price       float64 `json:"price"`
-							PriceInfo   struct {
-								Amount       float64 `json:"amount"`
-								CurrencyCode string  `json:"currencyCode"`
-								DisplayText  string  `json:"displayText"`
-							} `json:"priceInfo"`
-							IsPrime bool   `json:"isPrime"`
-							PromoID string `json:"promoId"`
-						} `json:"promotion"`
-						Promotions []struct {
-							ProductID   int64   `json:"productId"`
-							PromotionID int     `json:"promotionId"`
-							Title       string  `json:"title"`
-							Type        string  `json:"type"`
-							Percentage  float64 `json:"percentage"`
-							Price       float64 `json:"price"`
-							PriceInfo   struct {
-								Amount       float64 `json:"amount"`
-								CurrencyCode string  `json:"currencyCode"`
-								DisplayText  string  `json:"displayText"`
-							} `json:"priceInfo"`
-							IsPrime     bool   `json:"isPrime"`
-							PromoID     string `json:"promoId"`
-							Description string `json:"description,omitempty"`
-						} `json:"promotions"`
-						Indicators      []interface{} `json:"indicators"`
-						Sponsored       bool          `json:"sponsored"`
-						Restricted      bool          `json:"restricted"`
-						ShowQuantifiers bool          `json:"showQuantifiers"`
+						Promotion       glovoPromotion   `json:"promotion"`
+						Promotions      []glovoPromotion `json:"promotions"`
+						Indicators      []interface{}    `json:"indicators"`
+						Sponsored       bool             `json:"sponsored"`
+						Restricted      bool             `json:"restricted"`
+						ShowQuantifiers bool             `json:"showQuantifiers"`
 					} `json:"data"`
 				} `json:"elements"`
 			} `json:"data"`
 		} `json:"body"`
 	} `json:"data"`
+}
+
+type glovoPromotion struct {
+	ProductID   int64   `json:"productId"`
+	PromotionID int     `json:"promotionId"`
+	Title       string  `json:"title"`
+	Type        string  `json:"type"`
+	Percentage  float64 `json:"percentage"`
+	Price       float64 `json:"price"`
+	PriceInfo   struct {
+		Amount       float64 `json:"amount"`
+		CurrencyCode string  `json:"currencyCode"`
+		DisplayText  string  `json:"displayText"`
+	} `json:"priceInfo"`
+	IsPrime     bool   `json:"isPrime"`
+	PromoID     string `json:"promoId"`
+	Description string `json:"description,omitempty"`
 }
