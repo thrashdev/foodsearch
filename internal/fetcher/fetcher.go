@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -58,35 +60,47 @@ func fetchGlovoFilters(filtersURL string) (filters []string, err error) {
 	return filters, nil
 }
 
-func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []string, err error) {
+func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []models.GlovoRestaurant, err error) {
 	fullURL := baseURL + "&filter=" + filter
 	respBody, err := fetchByUrl(fullURL)
 
-	var glovoResp glovoStoresResponse
+	var glovoResp glovoRestaurantsResponse
 	err = json.Unmarshal(respBody, &glovoResp)
 	if err != nil {
 		log.Println(fullURL)
-		return []string{}, err
+		return []models.GlovoRestaurant{}, err
 	}
 
 	for _, item := range glovoResp.Elements {
-		restaurants = append(restaurants, item.SingleData.StoreData.Store.Name)
+		glovoRest := models.GlovoRestaurant{
+			Restaurant: models.Restaurant{
+				ID:          uuid.New(),
+				Name:        item.SingleData.StoreData.Store.Name,
+				Address:     item.SingleData.StoreData.Store.Address,
+				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
+				PhoneNumber: item.SingleData.StoreData.Store.PhoneNumber,
+			},
+			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
+			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
+		}
+
+		restaurants = append(restaurants, glovoRest)
 	}
 
 	return restaurants, nil
 
 }
 
-func FetchGlovoStores(baseURL string, filtersURL string) (allRestaurants []string, err error) {
+func FetchGlovoRestaurants(baseURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {
 	filters, err := fetchGlovoFilters(filtersURL)
 	if err != nil {
-		return []string{}, fmt.Errorf("Couldn't get filters, err: %v", err)
+		return []models.GlovoRestaurant{}, fmt.Errorf("Couldn't get filters, err: %v", err)
 	}
 
 	for _, f := range filters {
 		restaurantsByFilter, err := fetchGlovoStoresByFilter(baseURL, url.QueryEscape(f))
 		if err != nil {
-			return []string{}, fmt.Errorf("Couldn't fetch by filter: %s. Error :%v", f, err)
+			return []models.GlovoRestaurant{}, fmt.Errorf("Couldn't fetch by filter: %s. Error :%v", f, err)
 		}
 
 		allRestaurants = append(allRestaurants, restaurantsByFilter...)
@@ -94,21 +108,53 @@ func FetchGlovoStores(baseURL string, filtersURL string) (allRestaurants []strin
 	return allRestaurants, nil
 }
 
-func GlovoRespToGlovoStores(resp glovoStoresResponse) ([]models.GlovoStore, error) {
-	result := []models.GlovoStore{}
-	for _, item := range resp.Elements {
-		store := models.GlovoStore{
-			Store: models.Store{
-				ID:          uuid.New(),
-				Name:        item.SingleData.StoreData.Store.Name,
-				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
-				Address:     item.SingleData.StoreData.Store.Address},
-			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
-			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
-		}
-
-		result = append(result, store)
+func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.GlovoDish, error) {
+	targetURL := strings.Replace(dishesURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoStoreID), 1)
+	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoAddressID), 1)
+	responsePayload, err := fetchByUrl(targetURL)
+	if err != nil {
+		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
 	}
 
-	return result, nil
+	var dishesResponse GlovoDishesResponse
+	err = json.Unmarshal(responsePayload, &dishesResponse)
+	if err != nil {
+		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
+	}
+
+	dishes := []models.GlovoDish{}
+	for _, elem := range dishesResponse.Data.Body {
+		for _, dishItem := range elem.Data.Elements {
+			dishes = append(dishes, models.GlovoDish{
+				GlovoID:     int(dishItem.Data.ID),
+				Name:        dishItem.Data.Name,
+				Description: dishItem.Data.Description,
+				Price:       dishItem.Data.Price,
+				PriceInfo:   dishItem.Data.PriceInfo,
+			})
+
+		}
+	}
+
+	return dishes, nil
+
 }
+
+// func GlovoRespToGlovoStores(resp glovoRestaurantsResponse) ([]models.GlovoRestaurant, error) {
+// 	result := []models.GlovoRestaurant{}
+// 	for _, item := range resp.Elements {
+// 		restaurant := models.GlovoRestaurant{
+// 			Restaurant: models.Restaurant{
+// 				ID:          uuid.New(),
+// 				Name:        item.SingleData.StoreData.Store.Name,
+// 				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
+// 				Address:     item.SingleData.StoreData.Store.Address},
+// 			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
+// 			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
+// 		}
+//
+// 		result = append(result, restaurant)
+// 	}
+//
+// 	return result, nil
+// }

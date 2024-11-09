@@ -4,15 +4,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type Store struct {
+type Restaurant struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"store_name"`
 	Address     string    `json:"address"`
 	DeliveryFee float64   `json:"delivery_fee"`
+	PhoneNumber string    `json:"phoneNumber"`
 }
 
-type GlovoStore struct {
-	Store
+type GlovoRestaurant struct {
+	Restaurant
 	GlovoStoreID   int `json:"glovo_id"`
 	GlovoAddressID int `json:"glovo_address_id"`
 }
@@ -28,17 +29,17 @@ type GlovoDish struct {
 		DisplayText  string  `json:"displayText"`
 	} `json:"priceInfo"`
 	CuisineID int `json:"cuisine_id"`
-	Promotion struct {
-		ProductID   int64   `json:"productId"`
-		PromotionID int     `json:"promotionId"`
-		Title       string  `json:"title"`
-		Type        string  `json:"type"`
-		Percentage  float64 `json:"percentage"`
-		Price       float64 `json:"price"`
-		PriceInfo   struct {
-			Amount       float64 `json:"amount"`
-			CurrencyCode string  `json:"currencyCode"`
-			DisplayText  string  `json:"displayText"`
-		} `json:"priceInfo"`
-	} `json:"promotion"`
+	// Promotion struct {
+	// 	ProductID   int64   `json:"productId"`
+	// 	PromotionID int     `json:"promotionId"`
+	// 	Title       string  `json:"title"`
+	// 	Type        string  `json:"type"`
+	// 	Percentage  float64 `json:"percentage"`
+	// 	Price       float64 `json:"price"`
+	// 	PriceInfo   struct {
+	// 		Amount       float64 `json:"amount"`
+	// 		CurrencyCode string  `json:"currencyCode"`
+	// 		DisplayText  string  `json:"displayText"`
+	// 	} `json:"priceInfo"`
+	// } `json:"promotion"`
 }
