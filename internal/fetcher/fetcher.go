@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -91,6 +92,8 @@ func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []mode
 				Address:     item.SingleData.StoreData.Store.Address,
 				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
 				PhoneNumber: item.SingleData.StoreData.Store.PhoneNumber,
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
 			},
 			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
 			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
@@ -146,6 +149,8 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.G
 					Description: dishItem.Data.Description,
 					Price:       dishItem.Data.Price,
 					MaxDiscount: discount,
+					CreatedAt:   time.Now(),
+					UpdatedAt:   time.Now(),
 				},
 			})
 
