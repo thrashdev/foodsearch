@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
 	"github.com/thrashdev/foodsearch/internal/models"
+	"net/http"
 	// "github.com/thrashdev/foodsearch/internal/models"
 )
 
@@ -16,34 +17,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	glovoURL := os.Getenv("glovo_url")
-	glovoFiltersURL := os.Getenv("glovo_filters_url")
-	glovoDishesURL := os.Getenv("glovo_dishes_url")
-	restaurants, err := fetcher.FetchGlovoRestaurants(glovoURL, glovoFiltersURL)
+	port := os.Getenv("PORT")
+	serveMux := http.NewServeMux()
+	server := http.Server{Handler: serveMux, Addr: ":" + port}
+	err = server.ListenAndServe()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal("Couldn't start the server: ", err)
 	}
-	rest := models.GlovoRestaurant{}
-	for _, r := range restaurants {
-		if r.Name == "WoK Lagman" {
-			rest = r
-		}
-	}
-	dishes, err := fetcher.FetchGlovoDishes(rest, glovoDishesURL)
-	if err != nil {
-		fmt.Println(err)
-	}
+	// glovoURL := os.Getenv("glovo_url")
+	// glovoFiltersURL := os.Getenv("glovo_filters_url")
+	// glovoDishesURL := os.Getenv("glovo_dishes_url")
 
-	// for _, r := range restaurants {
-	// 	restDishes, err := fetcher.FetchGlovoDishes(r, glovoDishesURL)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		continue
-	// 	}
-	// 	dishes = append(dishes, restDishes...)
-	// }
-
-	for _, _ = range dishes {
-
-	}
 }
