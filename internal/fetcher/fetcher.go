@@ -1,6 +1,8 @@
 package fetcher
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/thrashdev/foodsearch/internal/config"
+	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
 )
 
@@ -73,7 +77,7 @@ func fetchGlovoFilters(filtersURL string) (filters []string, err error) {
 	return filters, nil
 }
 
-func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []models.GlovoRestaurant, err error) {
+func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants []models.GlovoRestaurant, err error) {
 	fullURL := baseURL + "&filter=" + filter
 	respBody, err := fetchByUrl(fullURL)
 
@@ -95,8 +99,8 @@ func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []mode
 				CreatedAt:   time.Now(),
 				UpdatedAt:   time.Now(),
 			},
-			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
-			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
+			GlovoApiStoreID:   item.SingleData.StoreData.Store.ID,
+			GlovoApiAddressID: item.SingleData.StoreData.Store.AddressID,
 		}
 
 		restaurants = append(restaurants, glovoRest)
@@ -106,14 +110,64 @@ func fetchGlovoStoresByFilter(baseURL string, filter string) (restaurants []mode
 
 }
 
-func FetchGlovoRestaurants(baseURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {
+func FetchNewGlovoRestaurants(cfg config.Config) error {
+	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
+	if err != nil {
+		return err
+	}
+	log.Println("Fetched restaurants from API")
+	log.Println(newRestaurants)
+	ctx := context.Background()
+	dbRestaurants, err := cfg.DB.GetGlovoRestaurantNames(ctx)
+	if err != nil {
+		return err
+	}
+	log.Println("Fetched restaurant names from DB")
+	restaurantsToAdd := []models.GlovoRestaurant{}
+	for _, nr := range newRestaurants {
+		for _, dbrName := range dbRestaurants {
+			if nr.Name != dbrName {
+				restaurantsToAdd = append(restaurantsToAdd, nr)
+			}
+		}
+	}
+	rowsAffected := int64(0)
+	for _, rest := range restaurantsToAdd {
+		arg := database.CreateGlovoRestaurantParams{
+			Name:              rest.Name,
+			Address:           rest.Address,
+			DeliveryFee:       strconv.FormatFloat(rest.DeliveryFee, 'g', -1, 64),
+			PhoneNumber:       sql.NullString{String: rest.PhoneNumber, Valid: true},
+			GlovoApiStoreID:   int32(rest.GlovoApiStoreID),
+			GlovoApiAddressID: int32(rest.GlovoApiAddressID),
+			CreatedAt:         time.Now().UTC(),
+			UpdatedAt:         time.Now().UTC(),
+		}
+
+		res, err := cfg.DB.CreateGlovoRestaurant(ctx, arg)
+		if err != nil {
+			log.Println("Couldn't post restaurant to DB :v", err)
+			return err
+		}
+		if newRows, err := res.RowsAffected(); err != nil {
+			log.Println("Couldn't access SQL result", err)
+			rowsAffected += newRows
+		}
+		log.Printf("Created restaurant %v\n", rest.Name)
+	}
+
+	log.Printf("Created %v restaurants\n", rowsAffected)
+	return nil
+}
+
+func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {
 	filters, err := fetchGlovoFilters(filtersURL)
 	if err != nil {
 		return []models.GlovoRestaurant{}, fmt.Errorf("Couldn't get filters, err: %v", err)
 	}
 
 	for _, f := range filters {
-		restaurantsByFilter, err := fetchGlovoStoresByFilter(baseURL, url.QueryEscape(f))
+		restaurantsByFilter, err := fetchGlovoRestaurantsByFilter(searchURL, url.QueryEscape(f))
 		if err != nil {
 			return []models.GlovoRestaurant{}, fmt.Errorf("Couldn't fetch by filter: %s. Error :%v", f, err)
 		}
@@ -124,8 +178,8 @@ func FetchGlovoRestaurants(baseURL string, filtersURL string) (allRestaurants []
 }
 
 func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.GlovoDish, error) {
-	targetURL := strings.Replace(dishesURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoStoreID), 1)
-	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoAddressID), 1)
+	targetURL := strings.Replace(dishesURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoApiStoreID), 1)
+	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoApiAddressID), 1)
 	responsePayload, err := fetchByUrl(targetURL)
 	if err != nil {
 		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
@@ -142,7 +196,7 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.G
 		for _, dishItem := range elem.Data.Elements {
 			discount := findMaxDiscountRate(dishItem.Data.Promotions)
 			dishes = append(dishes, models.GlovoDish{
-				GlovoID: int(dishItem.Data.ID),
+				GlovoAPIDishID: int(dishItem.Data.ID),
 				Dish: models.Dish{
 					ID:          uuid.New(),
 					Name:        dishItem.Data.Name,
