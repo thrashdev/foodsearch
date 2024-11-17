@@ -9,6 +9,7 @@ type GlovoConfig struct {
 }
 
 type Config struct {
-	Glovo GlovoConfig
-	DB    database.Queries
+	Glovo           GlovoConfig
+	UpdateBatchSize int
+	DB              database.Queries
 }

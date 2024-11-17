@@ -36,8 +36,9 @@ type DishCategory struct {
 
 type GlovoRestaurant struct {
 	Restaurant
-	GlovoApiStoreID   int `json:"glovo_id"`
-	GlovoApiAddressID int `json:"glovo_address_id"`
+	GlovoApiStoreID   int    `json:"glovo_id"`
+	GlovoApiAddressID int    `json:"glovo_address_id"`
+	GlovoApiSlug      string `json:"glovo_api_slug"`
 }
 
 type GlovoDish struct {

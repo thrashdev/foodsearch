@@ -2,7 +2,6 @@ package fetcher
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,10 +13,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
+	"github.com/thrashdev/foodsearch/internal/utils"
 )
+
+func restaurantDifference(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
+	mb := make(map[string]struct{}, len(dbrNames))
+	for _, name := range dbrNames {
+		mb[name] = struct{}{}
+	}
+	var diff []models.GlovoRestaurant
+	for _, rest := range restaurants {
+		if _, found := mb[rest.Name]; !found {
+			diff = append(diff, rest)
+		}
+	}
+	return diff
+
+}
 
 func findMaxDiscountRate(promos []glovoPromotion) float64 {
 	max := 0.0
@@ -101,6 +117,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 			},
 			GlovoApiStoreID:   item.SingleData.StoreData.Store.ID,
 			GlovoApiAddressID: item.SingleData.StoreData.Store.AddressID,
+			GlovoApiSlug:      item.SingleData.StoreData.Store.Slug,
 		}
 
 		restaurants = append(restaurants, glovoRest)
@@ -115,50 +132,63 @@ func FetchNewGlovoRestaurants(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Fetched restaurants from API")
-	log.Println(newRestaurants)
+	log.Printf("Fetched %v restaurants from API\n", len(newRestaurants))
 	ctx := context.Background()
-	dbRestaurants, err := cfg.DB.GetGlovoRestaurantNames(ctx)
+	dbRestaurantNames, err := cfg.DB.GetGlovoRestaurantNames(ctx)
 	if err != nil {
 		return err
 	}
-	log.Println("Fetched restaurant names from DB")
-	restaurantsToAdd := []models.GlovoRestaurant{}
-	for _, nr := range newRestaurants {
-		for _, dbrName := range dbRestaurants {
-			if nr.Name != dbrName {
-				restaurantsToAdd = append(restaurantsToAdd, nr)
-			}
-		}
-	}
-	rowsAffected := int64(0)
+	log.Printf("Fetched %v restaurants from DB\n", len(dbRestaurantNames))
+	restaurantsToAdd := restaurantDifference(newRestaurants, dbRestaurantNames)
+	log.Printf("Restaurants to add: %v\n", len(restaurantsToAdd))
+	args := []database.BatchCreateGlovoRestaurantsParams{}
 	for _, rest := range restaurantsToAdd {
-		arg := database.CreateGlovoRestaurantParams{
+		arg := database.BatchCreateGlovoRestaurantsParams{
+			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
 			Name:              rest.Name,
 			Address:           rest.Address,
-			DeliveryFee:       strconv.FormatFloat(rest.DeliveryFee, 'g', -1, 64),
-			PhoneNumber:       sql.NullString{String: rest.PhoneNumber, Valid: true},
+			DeliveryFee:       utils.FloatToNumeric(rest.DeliveryFee),
+			PhoneNumber:       pgtype.Text{String: rest.PhoneNumber, Valid: true},
 			GlovoApiStoreID:   int32(rest.GlovoApiStoreID),
 			GlovoApiAddressID: int32(rest.GlovoApiAddressID),
-			CreatedAt:         time.Now().UTC(),
-			UpdatedAt:         time.Now().UTC(),
+			GlovoApiSlug:      rest.GlovoApiSlug,
+			CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+			UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
 		}
 
-		res, err := cfg.DB.CreateGlovoRestaurant(ctx, arg)
-		if err != nil {
-			log.Println("Couldn't post restaurant to DB :v", err)
-			return err
-		}
-		if newRows, err := res.RowsAffected(); err != nil {
-			log.Println("Couldn't access SQL result", err)
-			rowsAffected += newRows
-		}
-		log.Printf("Created restaurant %v\n", rest.Name)
+		args = append(args, arg)
+
+		// res, err := cfg.DB.CreateGlovoRestaurant(ctx, arg)
+		// if err != nil {
+		// 	log.Println("Couldn't post restaurant to DB :v", err)
+		// 	return err
+		// }
+		// newRows := res.RowsAffected()
+		// rowsAffected += newRows
+		// log.Printf("Created restaurant %v\n", rest.Name)
+	}
+	log.Printf("Prepared to create %v restaurants\n", len(args))
+	rowsAffected, err := cfg.DB.BatchCreateGlovoRestaurants(ctx, args)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Couldn't create glovo restaurants: %w", err))
 	}
 
 	log.Printf("Created %v restaurants\n", rowsAffected)
 	return nil
 }
+
+// func UpdateRestaurants(cfg config.Config) error {
+// 	ctx := context.Background()
+// 	restaurantsToUpdate, err := cfg.DB.GetGlovoRestaurantsToUpdate(ctx, int32(cfg.UpdateBatchSize))
+// 	if err != nil {
+// 		return fmt.Errorf("Couldn't fetch glovo restaurants to update :w", err)
+// 	}
+//
+// }
+//
+// func updateRestaurant(rest models.GlovoRestaurant) error {
+//
+// }
 
 func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {
 	filters, err := fetchGlovoFilters(filtersURL)

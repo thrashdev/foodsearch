@@ -8,6 +8,7 @@ CREATE TABLE glovo_restaurant(
 	phone_number TEXT,
 	glovo_api_store_id INTEGER NOT NULL,
 	glovo_api_address_id INTEGER NOT NULL,
+	glovo_api_slug TEXT NOT NULL,
 	created_at TIMESTAMP NOT NULL,
 	updated_at TIMESTAMP NOT NULL
 );

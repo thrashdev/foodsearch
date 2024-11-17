@@ -7,77 +7,41 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"time"
 
-	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createGlovoDish = `-- name: CreateGlovoDish :execresult
-INSERT INTO glovo_dish(name, description, price, discount, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-`
-
-type CreateGlovoDishParams struct {
-	Name              string
-	Description       string
-	Price             string
-	Discount          string
-	GlovoApiDishID    int32
-	GlovoRestaurantID uuid.NullUUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-}
-
-func (q *Queries) CreateGlovoDish(ctx context.Context, arg CreateGlovoDishParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createGlovoDish,
-		arg.Name,
-		arg.Description,
-		arg.Price,
-		arg.Discount,
-		arg.GlovoApiDishID,
-		arg.GlovoRestaurantID,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-}
-
-const createGlovoRestaurant = `-- name: CreateGlovoRestaurant :execresult
-INSERT INTO glovo_restaurant(name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-`
-
-type CreateGlovoRestaurantParams struct {
+type BatchCreateGlovoRestaurantsParams struct {
+	ID                pgtype.UUID
 	Name              string
 	Address           string
-	DeliveryFee       string
-	PhoneNumber       sql.NullString
+	DeliveryFee       pgtype.Numeric
+	PhoneNumber       pgtype.Text
 	GlovoApiStoreID   int32
 	GlovoApiAddressID int32
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	GlovoApiSlug      string
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
 }
 
-func (q *Queries) CreateGlovoRestaurant(ctx context.Context, arg CreateGlovoRestaurantParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createGlovoRestaurant,
-		arg.Name,
-		arg.Address,
-		arg.DeliveryFee,
-		arg.PhoneNumber,
-		arg.GlovoApiStoreID,
-		arg.GlovoApiAddressID,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
+type CreateGlovoDishParams struct {
+	ID                pgtype.UUID
+	Name              string
+	Description       string
+	Price             pgtype.Numeric
+	Discount          pgtype.Numeric
+	GlovoApiDishID    int32
+	GlovoRestaurantID pgtype.UUID
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
 }
 
 const getGlovoRestaurantNames = `-- name: GetGlovoRestaurantNames :many
-select name from glovo_restaurant
+SELECT name FROM glovo_restaurant
 `
 
 func (q *Queries) GetGlovoRestaurantNames(ctx context.Context) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getGlovoRestaurantNames)
+	rows, err := q.db.Query(ctx, getGlovoRestaurantNames)
 	if err != nil {
 		return nil, err
 	}
@@ -90,46 +54,6 @@ func (q *Queries) GetGlovoRestaurantNames(ctx context.Context) ([]string, error)
 		}
 		items = append(items, name)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getGlovoRestaurants = `-- name: GetGlovoRestaurants :many
-SELECT id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, created_at, updated_at FROM glovo_restaurant ORDER BY updated_at DESC
-`
-
-func (q *Queries) GetGlovoRestaurants(ctx context.Context) ([]GlovoRestaurant, error) {
-	rows, err := q.db.QueryContext(ctx, getGlovoRestaurants)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GlovoRestaurant
-	for rows.Next() {
-		var i GlovoRestaurant
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Address,
-			&i.DeliveryFee,
-			&i.PhoneNumber,
-			&i.GlovoApiStoreID,
-			&i.GlovoApiAddressID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -137,12 +61,12 @@ func (q *Queries) GetGlovoRestaurants(ctx context.Context) ([]GlovoRestaurant, e
 }
 
 const getGlovoRestaurantsByName = `-- name: GetGlovoRestaurantsByName :many
-SELECT id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, created_at, updated_at FROM glovo_restaurant
+SELECT id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, glovo_api_slug, created_at, updated_at FROM glovo_restaurant
 WHERE name = ANY($1::TEXT[])
 `
 
 func (q *Queries) GetGlovoRestaurantsByName(ctx context.Context, restaurantNames []string) ([]GlovoRestaurant, error) {
-	rows, err := q.db.QueryContext(ctx, getGlovoRestaurantsByName, pq.Array(restaurantNames))
+	rows, err := q.db.Query(ctx, getGlovoRestaurantsByName, restaurantNames)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +82,7 @@ func (q *Queries) GetGlovoRestaurantsByName(ctx context.Context, restaurantNames
 			&i.PhoneNumber,
 			&i.GlovoApiStoreID,
 			&i.GlovoApiAddressID,
+			&i.GlovoApiSlug,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -165,8 +90,41 @@ func (q *Queries) GetGlovoRestaurantsByName(ctx context.Context, restaurantNames
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	return items, nil
+}
+
+const getGlovoRestaurantsToUpdate = `-- name: GetGlovoRestaurantsToUpdate :many
+SELECT id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, glovo_api_slug, created_at, updated_at FROM glovo_restaurant ORDER BY updated_at DESC
+LIMIT $1
+`
+
+func (q *Queries) GetGlovoRestaurantsToUpdate(ctx context.Context, limit int32) ([]GlovoRestaurant, error) {
+	rows, err := q.db.Query(ctx, getGlovoRestaurantsToUpdate, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GlovoRestaurant
+	for rows.Next() {
+		var i GlovoRestaurant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.DeliveryFee,
+			&i.PhoneNumber,
+			&i.GlovoApiStoreID,
+			&i.GlovoApiAddressID,
+			&i.GlovoApiSlug,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

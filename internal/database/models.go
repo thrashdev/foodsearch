@@ -5,42 +5,40 @@
 package database
 
 import (
-	"database/sql"
-	"time"
-
-	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type DishBinding struct {
-	ID          uuid.UUID
-	GlovoDishID uuid.NullUUID
+	ID          pgtype.UUID
+	GlovoDishID pgtype.UUID
 }
 
 type GlovoDish struct {
-	ID                uuid.UUID
+	ID                pgtype.UUID
 	Name              string
 	Description       string
-	Price             string
-	Discount          string
+	Price             pgtype.Numeric
+	Discount          pgtype.Numeric
 	GlovoApiDishID    int32
-	GlovoRestaurantID uuid.NullUUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	GlovoRestaurantID pgtype.UUID
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
 }
 
 type GlovoRestaurant struct {
-	ID                uuid.UUID
+	ID                pgtype.UUID
 	Name              string
 	Address           string
-	DeliveryFee       string
-	PhoneNumber       sql.NullString
+	DeliveryFee       pgtype.Numeric
+	PhoneNumber       pgtype.Text
 	GlovoApiStoreID   int32
 	GlovoApiAddressID int32
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	GlovoApiSlug      string
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
 }
 
 type RestaurantBinding struct {
-	ID                uuid.UUID
-	GlovoRestaurantID uuid.NullUUID
+	ID                pgtype.UUID
+	GlovoRestaurantID pgtype.UUID
 }

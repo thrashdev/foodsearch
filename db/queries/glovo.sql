@@ -1,16 +1,17 @@
--- name: CreateGlovoRestaurant :execresult
-INSERT INTO glovo_restaurant(name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+-- name: BatchCreateGlovoRestaurants :copyfrom
+INSERT INTO glovo_restaurant(id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, glovo_api_slug, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
--- name: CreateGlovoDish :execresult
-INSERT INTO glovo_dish(name, description, price, discount, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+-- name: CreateGlovoDish :copyfrom
+INSERT INTO glovo_dish(id, name, description, price, discount, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
--- name: GetGlovoRestaurants :many
-SELECT * FROM glovo_restaurant ORDER BY updated_at DESC;
+-- name: GetGlovoRestaurantsToUpdate :many
+SELECT * FROM glovo_restaurant ORDER BY updated_at DESC
+LIMIT $1;
 
 -- name: GetGlovoRestaurantNames :many
-select name from glovo_restaurant;
+SELECT name FROM glovo_restaurant;
 
 -- name: GetGlovoRestaurantsByName :many
 SELECT * FROM glovo_restaurant
