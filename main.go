@@ -48,7 +48,7 @@ func main() {
 	}
 	defer conn.Close(ctx)
 	db := database.New(conn)
-	config := config.Config{
+	config := &config.Config{
 		Glovo: config.GlovoConfig{
 			SearchURL:  glovoSearchURL,
 			FiltersURL: glovoFiltersURL,
@@ -58,7 +58,7 @@ func main() {
 		UpdateBatchSize: 5,
 	}
 	fmt.Println("Started fetching new restaurants")
-	go fetcher.FetchNewGlovoRestaurants(config)
+	go fetcher.CreateNewDishesForRestaurants(config)
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 

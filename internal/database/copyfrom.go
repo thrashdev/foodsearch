@@ -9,6 +9,46 @@ import (
 	"context"
 )
 
+// iteratorForBatchCreateGlovoDishes implements pgx.CopyFromSource.
+type iteratorForBatchCreateGlovoDishes struct {
+	rows                 []BatchCreateGlovoDishesParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForBatchCreateGlovoDishes) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForBatchCreateGlovoDishes) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].Name,
+		r.rows[0].Description,
+		r.rows[0].Price,
+		r.rows[0].Discount,
+		r.rows[0].GlovoApiDishID,
+		r.rows[0].GlovoRestaurantID,
+		r.rows[0].CreatedAt,
+		r.rows[0].UpdatedAt,
+	}, nil
+}
+
+func (r iteratorForBatchCreateGlovoDishes) Err() error {
+	return nil
+}
+
+func (q *Queries) BatchCreateGlovoDishes(ctx context.Context, arg []BatchCreateGlovoDishesParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"glovo_dish"}, []string{"id", "name", "description", "price", "discount", "glovo_api_dish_id", "glovo_restaurant_id", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoDishes{rows: arg})
+}
+
 // iteratorForBatchCreateGlovoRestaurants implements pgx.CopyFromSource.
 type iteratorForBatchCreateGlovoRestaurants struct {
 	rows                 []BatchCreateGlovoRestaurantsParams
@@ -48,44 +88,4 @@ func (r iteratorForBatchCreateGlovoRestaurants) Err() error {
 
 func (q *Queries) BatchCreateGlovoRestaurants(ctx context.Context, arg []BatchCreateGlovoRestaurantsParams) (int64, error) {
 	return q.db.CopyFrom(ctx, []string{"glovo_restaurant"}, []string{"id", "name", "address", "delivery_fee", "phone_number", "glovo_api_store_id", "glovo_api_address_id", "glovo_api_slug", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoRestaurants{rows: arg})
-}
-
-// iteratorForCreateGlovoDish implements pgx.CopyFromSource.
-type iteratorForCreateGlovoDish struct {
-	rows                 []CreateGlovoDishParams
-	skippedFirstNextCall bool
-}
-
-func (r *iteratorForCreateGlovoDish) Next() bool {
-	if len(r.rows) == 0 {
-		return false
-	}
-	if !r.skippedFirstNextCall {
-		r.skippedFirstNextCall = true
-		return true
-	}
-	r.rows = r.rows[1:]
-	return len(r.rows) > 0
-}
-
-func (r iteratorForCreateGlovoDish) Values() ([]interface{}, error) {
-	return []interface{}{
-		r.rows[0].ID,
-		r.rows[0].Name,
-		r.rows[0].Description,
-		r.rows[0].Price,
-		r.rows[0].Discount,
-		r.rows[0].GlovoApiDishID,
-		r.rows[0].GlovoRestaurantID,
-		r.rows[0].CreatedAt,
-		r.rows[0].UpdatedAt,
-	}, nil
-}
-
-func (r iteratorForCreateGlovoDish) Err() error {
-	return nil
-}
-
-func (q *Queries) CreateGlovoDish(ctx context.Context, arg []CreateGlovoDishParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"glovo_dish"}, []string{"id", "name", "description", "price", "discount", "glovo_api_dish_id", "glovo_restaurant_id", "created_at", "updated_at"}, &iteratorForCreateGlovoDish{rows: arg})
 }

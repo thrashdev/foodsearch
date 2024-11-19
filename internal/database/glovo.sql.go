@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BatchCreateGlovoDishesParams struct {
+	ID                pgtype.UUID
+	Name              string
+	Description       string
+	Price             pgtype.Numeric
+	Discount          pgtype.Numeric
+	GlovoApiDishID    int32
+	GlovoRestaurantID pgtype.UUID
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
+}
+
 type BatchCreateGlovoRestaurantsParams struct {
 	ID                pgtype.UUID
 	Name              string
@@ -24,16 +36,63 @@ type BatchCreateGlovoRestaurantsParams struct {
 	UpdatedAt         pgtype.Timestamp
 }
 
-type CreateGlovoDishParams struct {
-	ID                pgtype.UUID
-	Name              string
-	Description       string
-	Price             pgtype.Numeric
-	Discount          pgtype.Numeric
-	GlovoApiDishID    int32
-	GlovoRestaurantID pgtype.UUID
-	CreatedAt         pgtype.Timestamp
-	UpdatedAt         pgtype.Timestamp
+const getAllGlovoRestaurants = `-- name: GetAllGlovoRestaurants :many
+select id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, glovo_api_slug, created_at, updated_at from glovo_restaurant
+`
+
+func (q *Queries) GetAllGlovoRestaurants(ctx context.Context) ([]GlovoRestaurant, error) {
+	rows, err := q.db.Query(ctx, getAllGlovoRestaurants)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GlovoRestaurant
+	for rows.Next() {
+		var i GlovoRestaurant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.DeliveryFee,
+			&i.PhoneNumber,
+			&i.GlovoApiStoreID,
+			&i.GlovoApiAddressID,
+			&i.GlovoApiSlug,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getGlovoDishNames = `-- name: GetGlovoDishNames :many
+select name from glovo_dish
+`
+
+func (q *Queries) GetGlovoDishNames(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, getGlovoDishNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGlovoRestaurantNames = `-- name: GetGlovoRestaurantNames :many

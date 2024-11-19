@@ -43,7 +43,8 @@ type GlovoRestaurant struct {
 
 type GlovoDish struct {
 	Dish
-	GlovoAPIDishID int `json:"id"`
+	GlovoAPIDishID    int       `json:"id"`
+	GlovoRestaurantID uuid.UUID `json:"glovo_restaurant_id"`
 }
 
 type RestaurantBinding struct {

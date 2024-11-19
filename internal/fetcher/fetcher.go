@@ -35,11 +35,24 @@ func restaurantDifference(restaurants []models.GlovoRestaurant, dbrNames []strin
 
 }
 
+func dishDifference(dishes []models.GlovoDish, dbDishNames []string) []models.GlovoDish {
+	mb := make(map[string]struct{}, len(dbDishNames))
+	for _, name := range dbDishNames {
+		mb[name] = struct{}{}
+	}
+	var diff []models.GlovoDish
+	for _, dish := range dishes {
+		if _, found := mb[dish.Name]; !found {
+			diff = append(diff, dish)
+		}
+	}
+	return diff
+}
+
 func findMaxDiscountRate(promos []glovoPromotion) float64 {
 	max := 0.0
 	for _, promo := range promos {
 		if promo.Percentage > max {
-			fmt.Printf("Processing %v\n", promo)
 			max = promo.Percentage
 		}
 	}
@@ -127,7 +140,62 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 
 }
 
-func FetchNewGlovoRestaurants(cfg config.Config) error {
+// TODO: implement proper error-handling with an error channel
+func CreateNewDishesForRestaurants(cfg *config.Config) error {
+	ctx := context.Background()
+	totalDishesCreated := 0
+	dbRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
+	if err != nil {
+		return err
+	}
+	for _, dbRest := range dbRestaurants {
+		rest := utils.DatabaseGlovoRestaurantToModel(dbRest)
+		dishesCreated := createNewDishesForGlovoRestaurant(cfg, rest)
+		totalDishesCreated += dishesCreated
+	}
+	fmt.Printf("Created %v total dishes for %v restaurants", totalDishesCreated, len(dbRestaurants))
+	return nil
+}
+
+// TODO: implement proper error-handling with an error channel
+func createNewDishesForGlovoRestaurant(cfg *config.Config, rest models.GlovoRestaurant) (dishesCreated int) {
+	newDishes, err := FetchGlovoDishes(rest, cfg.Glovo.DishURL)
+	if err != nil {
+		log.Printf("Couldn't fetch dishes: %v", err)
+		return 0
+	}
+	ctx := context.Background()
+	dbDishNames, err := cfg.DB.GetGlovoDishNames(ctx)
+	dishesToAdd := dishDifference(newDishes, dbDishNames)
+	args := []database.BatchCreateGlovoDishesParams{}
+	for _, dish := range dishesToAdd {
+		arg := database.BatchCreateGlovoDishesParams{
+			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
+			Name:              dish.Name,
+			Description:       dish.Description,
+			Price:             utils.FloatToNumeric(dish.Price),
+			Discount:          utils.FloatToNumeric(dish.MaxDiscount),
+			GlovoApiDishID:    int32(dish.GlovoAPIDishID),
+			GlovoRestaurantID: pgtype.UUID{Bytes: dish.GlovoRestaurantID, Valid: true},
+			CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+			UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+		}
+
+		args = append(args, arg)
+	}
+
+	rowsAffected, err := cfg.DB.BatchCreateGlovoDishes(ctx, args)
+	if err != nil {
+		log.Printf("Couldn't create dishes: %v", err)
+		return 0
+	}
+	log.Printf("Created %v dishes", rowsAffected)
+	return int(rowsAffected)
+
+}
+
+// TODO: implement proper error-handling with an error channel
+func FetchNewGlovoRestaurants(cfg *config.Config) error {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
 		return err
@@ -207,8 +275,8 @@ func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants 
 	return allRestaurants, nil
 }
 
-func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.GlovoDish, error) {
-	targetURL := strings.Replace(dishesURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoApiStoreID), 1)
+func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string) ([]models.GlovoDish, error) {
+	targetURL := strings.Replace(dishURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoApiStoreID), 1)
 	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoApiAddressID), 1)
 	responsePayload, err := fetchByUrl(targetURL)
 	if err != nil {
@@ -236,6 +304,7 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishesURL string) ([]models.G
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 				},
+				GlovoRestaurantID: rest.ID,
 			})
 
 		}
