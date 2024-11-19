@@ -37,3 +37,13 @@ func DatabaseGlovoRestaurantToModel(dbRest database.GlovoRestaurant) models.Glov
 		GlovoApiSlug:      dbRest.GlovoApiSlug,
 	}
 }
+
+func PrintErrors(errCh chan error) {
+	for {
+		err := <-errCh
+		if err == nil {
+			break
+		}
+		log.Println(err)
+	}
+}

@@ -20,6 +20,11 @@ import (
 	"github.com/thrashdev/foodsearch/internal/utils"
 )
 
+type dishResponse struct {
+	Payload      []byte
+	RestaurantID uuid.UUID
+}
+
 func restaurantDifference(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
 	mb := make(map[string]struct{}, len(dbrNames))
 	for _, name := range dbrNames {
@@ -79,6 +84,7 @@ func fetchByUrl(url string) (payload []byte, err error) {
 		return []byte{}, fmt.Errorf("Couldn't post request, err: %v", err)
 	}
 	defer resp.Body.Close()
+	fmt.Println("Response Code: ", resp.StatusCode)
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -142,31 +148,53 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 
 // TODO: implement proper error-handling with an error channel
 func CreateNewDishesForRestaurants(cfg *config.Config) error {
+	fmt.Println("Creating new dishes")
 	ctx := context.Background()
-	totalDishesCreated := 0
+	maxConcurrency := 3
+	limiter := make(chan struct{}, maxConcurrency)
+	errCh := make(chan error)
+	go utils.PrintErrors(errCh)
 	dbRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
 		return err
 	}
+	payloadsCh := make(chan dishResponse, len(dbRestaurants))
 	for _, dbRest := range dbRestaurants {
-		rest := utils.DatabaseGlovoRestaurantToModel(dbRest)
-		dishesCreated := createNewDishesForGlovoRestaurant(cfg, rest)
-		totalDishesCreated += dishesCreated
+		limiter <- struct{}{}
+		go func() {
+			defer func() { <-limiter }()
+			// defer fmt.Printf("Fetched dishes for %v\n", dbRest.Name)
+			rest := utils.DatabaseGlovoRestaurantToModel(dbRest)
+			payload := FetchGlovoDishes(rest, cfg.Glovo.DishURL, errCh)
+			payloadsCh <- payload
+		}()
 	}
+	// waiting for goroutines to finish
+	for i := 0; i < cap(limiter); i++ {
+		limiter <- struct{}{}
+	}
+	close(payloadsCh)
+	close(errCh)
+
+	fmt.Println("Collected all responses")
+	dishes := []models.GlovoDish{}
+	for p := range payloadsCh {
+		dishesPerRestaurant, _ := serializeGlovoDishes(p.Payload, p.RestaurantID)
+		dishes = append(dishes, dishesPerRestaurant...)
+	}
+	fmt.Println("Prepped all dishes")
+	fmt.Printf("Total dishes fetched: %v\n", len(dishes))
+	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishes, errCh)
+
 	fmt.Printf("Created %v total dishes for %v restaurants", totalDishesCreated, len(dbRestaurants))
 	return nil
 }
 
 // TODO: implement proper error-handling with an error channel
-func createNewDishesForGlovoRestaurant(cfg *config.Config, rest models.GlovoRestaurant) (dishesCreated int) {
-	newDishes, err := FetchGlovoDishes(rest, cfg.Glovo.DishURL)
-	if err != nil {
-		log.Printf("Couldn't fetch dishes: %v", err)
-		return 0
-	}
+func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.GlovoDish, errCh chan error) (dishesCreated int) {
 	ctx := context.Background()
 	dbDishNames, err := cfg.DB.GetGlovoDishNames(ctx)
-	dishesToAdd := dishDifference(newDishes, dbDishNames)
+	dishesToAdd := dishDifference(dishes, dbDishNames)
 	args := []database.BatchCreateGlovoDishesParams{}
 	for _, dish := range dishesToAdd {
 		arg := database.BatchCreateGlovoDishesParams{
@@ -186,7 +214,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, rest models.GlovoRest
 
 	rowsAffected, err := cfg.DB.BatchCreateGlovoDishes(ctx, args)
 	if err != nil {
-		log.Printf("Couldn't create dishes: %v", err)
+		errCh <- fmt.Errorf("Couldn't create dishes: %v", err)
 		return 0
 	}
 	log.Printf("Created %v dishes", rowsAffected)
@@ -195,7 +223,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, rest models.GlovoRest
 }
 
 // TODO: implement proper error-handling with an error channel
-func FetchNewGlovoRestaurants(cfg *config.Config) error {
+func CreateNewGlovoRestaurants(cfg *config.Config) error {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
 		return err
@@ -226,14 +254,6 @@ func FetchNewGlovoRestaurants(cfg *config.Config) error {
 
 		args = append(args, arg)
 
-		// res, err := cfg.DB.CreateGlovoRestaurant(ctx, arg)
-		// if err != nil {
-		// 	log.Println("Couldn't post restaurant to DB :v", err)
-		// 	return err
-		// }
-		// newRows := res.RowsAffected()
-		// rowsAffected += newRows
-		// log.Printf("Created restaurant %v\n", rest.Name)
 	}
 	log.Printf("Prepared to create %v restaurants\n", len(args))
 	rowsAffected, err := cfg.DB.BatchCreateGlovoRestaurants(ctx, args)
@@ -275,16 +295,23 @@ func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants 
 	return allRestaurants, nil
 }
 
-func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string) ([]models.GlovoDish, error) {
+func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string, errCh chan error) (payload dishResponse) {
 	targetURL := strings.Replace(dishURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoApiStoreID), 1)
 	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoApiAddressID), 1)
 	responsePayload, err := fetchByUrl(targetURL)
 	if err != nil {
-		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
+		errCh <- fmt.Errorf("Error encountered while fetching dishes for %v: %v\n", rest.Name, err)
+		return dishResponse{}
 	}
+	dishResp := dishResponse{Payload: responsePayload, RestaurantID: rest.ID}
 
+	return dishResp
+
+}
+
+func serializeGlovoDishes(responsePayload []byte, restID uuid.UUID) ([]models.GlovoDish, error) {
 	var dishesResponse glovoDishesResponse
-	err = json.Unmarshal(responsePayload, &dishesResponse)
+	err := json.Unmarshal(responsePayload, &dishesResponse)
 	if err != nil {
 		return []models.GlovoDish{}, fmt.Errorf("Error encountered while fetching glovo dishes: %v\n", err)
 	}
@@ -304,14 +331,13 @@ func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string) ([]models.Glo
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 				},
-				GlovoRestaurantID: rest.ID,
+				GlovoRestaurantID: restID,
 			})
 
 		}
 	}
 
 	return dishes, nil
-
 }
 
 // func GlovoRespToGlovoStores(resp glovoRestaurantsResponse) ([]models.GlovoRestaurant, error) {
