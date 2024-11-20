@@ -19,8 +19,8 @@ CREATE TABLE glovo_dish(
 	description TEXT NOT NULL,
 	price DECIMAL NOT NULL,
 	discount DECIMAL NOT NULL,
-	glovo_api_dish_id INTEGER NOT NULL,
-	glovo_restaurant_id UUID,
+	glovo_api_dish_id INTEGER NOT NULL UNIQUE,
+	glovo_restaurant_id UUID NOT NULL,
 	created_at TIMESTAMP NOT NULL,
 	updated_at TIMESTAMP NOT NULL,
 	CONSTRAINT fk_glovo_dish_glovo_restaurant_id

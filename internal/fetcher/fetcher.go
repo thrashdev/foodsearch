@@ -65,6 +65,34 @@ func findMaxDiscountRate(promos []glovoPromotion) float64 {
 	return max
 }
 
+func removeDuplicateRestaurants(rests []models.GlovoRestaurant) []models.GlovoRestaurant {
+	extracted := make(map[string]struct{})
+	result := []models.GlovoRestaurant{}
+	for _, r := range rests {
+		_, ok := extracted[r.Name]
+		if ok {
+			continue
+		}
+		result = append(result, r)
+		extracted[r.Name] = struct{}{}
+	}
+	return result
+}
+
+func removeDuplicateDishes(dishesD []models.GlovoDish) []models.GlovoDish {
+	extracted := make(map[int]struct{})
+	result := []models.GlovoDish{}
+	for _, d := range dishesD {
+		_, ok := extracted[d.GlovoAPIDishID]
+		if ok {
+			continue
+		}
+		result = append(result, d)
+		extracted[d.GlovoAPIDishID] = struct{}{}
+	}
+	return result
+}
+
 func fetchByUrl(url string) (payload []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -150,7 +178,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 func CreateNewDishesForRestaurants(cfg *config.Config) error {
 	fmt.Println("Creating new dishes")
 	ctx := context.Background()
-	maxConcurrency := 3
+	maxConcurrency := 2
 	limiter := make(chan struct{}, maxConcurrency)
 	errCh := make(chan error)
 	go utils.PrintErrors(errCh)
@@ -169,21 +197,22 @@ func CreateNewDishesForRestaurants(cfg *config.Config) error {
 			payloadsCh <- payload
 		}()
 	}
+
 	// waiting for goroutines to finish
 	for i := 0; i < cap(limiter); i++ {
 		limiter <- struct{}{}
 	}
 	close(payloadsCh)
-	close(errCh)
 
 	fmt.Println("Collected all responses")
-	dishes := []models.GlovoDish{}
+	dishesD := []models.GlovoDish{}
 	for p := range payloadsCh {
 		dishesPerRestaurant, _ := serializeGlovoDishes(p.Payload, p.RestaurantID)
-		dishes = append(dishes, dishesPerRestaurant...)
+		dishesD = append(dishesD, dishesPerRestaurant...)
 	}
 	fmt.Println("Prepped all dishes")
-	fmt.Printf("Total dishes fetched: %v\n", len(dishes))
+	fmt.Printf("Total dishes fetched: %v\n", len(dishesD))
+	dishes := removeDuplicateDishes(dishesD)
 	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishes, errCh)
 
 	fmt.Printf("Created %v total dishes for %v restaurants", totalDishesCreated, len(dbRestaurants))
@@ -292,7 +321,9 @@ func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants 
 
 		allRestaurants = append(allRestaurants, restaurantsByFilter...)
 	}
-	return allRestaurants, nil
+	result := removeDuplicateRestaurants(allRestaurants)
+
+	return result, nil
 }
 
 func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string, errCh chan error) (payload dishResponse) {

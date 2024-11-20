@@ -59,7 +59,7 @@ func main() {
 	}
 	fmt.Println("Started fetching new restaurants")
 	err = fetcher.CreateNewGlovoRestaurants(config)
-	// fetcher.CreateNewDishesForRestaurants(config)
+	err = fetcher.CreateNewDishesForRestaurants(config)
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 
