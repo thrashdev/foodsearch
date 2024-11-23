@@ -40,7 +40,7 @@ func restaurantDifference(restaurants []models.GlovoRestaurant, dbrNames []strin
 
 }
 
-func dishDifference(dishes []models.GlovoDish, dbDishNames []string) []models.GlovoDish {
+func dishNameDifference(dishes []models.GlovoDish, dbDishNames []string) []models.GlovoDish {
 	mb := make(map[string]struct{}, len(dbDishNames))
 	for _, name := range dbDishNames {
 		mb[name] = struct{}{}
@@ -52,6 +52,21 @@ func dishDifference(dishes []models.GlovoDish, dbDishNames []string) []models.Gl
 		}
 	}
 	return diff
+}
+
+func dishGlovoApiIdDifference(dishes []models.GlovoDish, ids []int32) []models.GlovoDish {
+	mb := make(map[int32]struct{}, len(ids))
+	for _, id := range ids {
+		mb[id] = struct{}{}
+	}
+	var diff []models.GlovoDish
+	for _, dish := range dishes {
+		if _, found := mb[int32(dish.GlovoAPIDishID)]; !found {
+			diff = append(diff, dish)
+		}
+	}
+	return diff
+
 }
 
 func findMaxDiscountRate(promos []glovoPromotion) float64 {
@@ -93,7 +108,7 @@ func removeDuplicateDishes(dishesD []models.GlovoDish) []models.GlovoDish {
 	return result
 }
 
-func fetchByUrl(url string) (payload []byte, err error) {
+func fetchByGlovoUrl(url string) (payload []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return []byte{}, fmt.Errorf("Couldn't create request, err: %v", err)
@@ -123,7 +138,7 @@ func fetchByUrl(url string) (payload []byte, err error) {
 }
 
 func fetchGlovoFilters(filtersURL string) (filters []string, err error) {
-	payload, err := fetchByUrl(filtersURL)
+	payload, err := fetchByGlovoUrl(filtersURL)
 	if err != nil {
 		return []string{}, err
 	}
@@ -142,7 +157,7 @@ func fetchGlovoFilters(filtersURL string) (filters []string, err error) {
 
 func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants []models.GlovoRestaurant, err error) {
 	fullURL := baseURL + "&filter=" + filter
-	respBody, err := fetchByUrl(fullURL)
+	respBody, err := fetchByGlovoUrl(fullURL)
 
 	var glovoResp glovoRestaurantsResponse
 	err = json.Unmarshal(respBody, &glovoResp)
@@ -213,7 +228,13 @@ func CreateNewDishesForRestaurants(cfg *config.Config) error {
 	fmt.Println("Prepped all dishes")
 	fmt.Printf("Total dishes fetched: %v\n", len(dishesD))
 	dishes := removeDuplicateDishes(dishesD)
-	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishes, errCh)
+	dbApiDish_IDS, err := cfg.DB.GetGlovoDishAPI_ID(ctx)
+	if err != nil {
+		errCh <- err
+	}
+	dishesToAdd := dishGlovoApiIdDifference(dishes, dbApiDish_IDS)
+	fmt.Printf("New dishes: %v", len(dishesToAdd))
+	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishesToAdd, errCh)
 
 	fmt.Printf("Created %v total dishes for %v restaurants", totalDishesCreated, len(dbRestaurants))
 	return nil
@@ -222,10 +243,8 @@ func CreateNewDishesForRestaurants(cfg *config.Config) error {
 // TODO: implement proper error-handling with an error channel
 func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.GlovoDish, errCh chan error) (dishesCreated int) {
 	ctx := context.Background()
-	dbDishNames, err := cfg.DB.GetGlovoDishNames(ctx)
-	dishesToAdd := dishDifference(dishes, dbDishNames)
 	args := []database.BatchCreateGlovoDishesParams{}
-	for _, dish := range dishesToAdd {
+	for _, dish := range dishes {
 		arg := database.BatchCreateGlovoDishesParams{
 			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
 			Name:              dish.Name,
@@ -329,7 +348,7 @@ func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants 
 func FetchGlovoDishes(rest models.GlovoRestaurant, dishURL string, errCh chan error) (payload dishResponse) {
 	targetURL := strings.Replace(dishURL, "{glovo_store_id}", strconv.Itoa(rest.GlovoApiStoreID), 1)
 	targetURL = strings.Replace(targetURL, "{glovo_address_id}", strconv.Itoa(rest.GlovoApiAddressID), 1)
-	responsePayload, err := fetchByUrl(targetURL)
+	responsePayload, err := fetchByGlovoUrl(targetURL)
 	if err != nil {
 		errCh <- fmt.Errorf("Error encountered while fetching dishes for %v: %v\n", rest.Name, err)
 		return dishResponse{}
@@ -370,22 +389,3 @@ func serializeGlovoDishes(responsePayload []byte, restID uuid.UUID) ([]models.Gl
 
 	return dishes, nil
 }
-
-// func GlovoRespToGlovoStores(resp glovoRestaurantsResponse) ([]models.GlovoRestaurant, error) {
-// 	result := []models.GlovoRestaurant{}
-// 	for _, item := range resp.Elements {
-// 		restaurant := models.GlovoRestaurant{
-// 			Restaurant: models.Restaurant{
-// 				ID:          uuid.New(),
-// 				Name:        item.SingleData.StoreData.Store.Name,
-// 				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
-// 				Address:     item.SingleData.StoreData.Store.Address},
-// 			GlovoStoreID:   item.SingleData.StoreData.Store.ID,
-// 			GlovoAddressID: item.SingleData.StoreData.Store.AddressID,
-// 		}
-//
-// 		result = append(result, restaurant)
-// 	}
-//
-// 	return result, nil
-// }

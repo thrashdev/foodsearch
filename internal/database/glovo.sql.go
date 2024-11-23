@@ -71,6 +71,30 @@ func (q *Queries) GetAllGlovoRestaurants(ctx context.Context) ([]GlovoRestaurant
 	return items, nil
 }
 
+const getGlovoDishAPI_ID = `-- name: GetGlovoDishAPI_ID :many
+select glovo_api_dish_id from glovo_dish
+`
+
+func (q *Queries) GetGlovoDishAPI_ID(ctx context.Context) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getGlovoDishAPI_ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var glovo_api_dish_id int32
+		if err := rows.Scan(&glovo_api_dish_id); err != nil {
+			return nil, err
+		}
+		items = append(items, glovo_api_dish_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGlovoDishNames = `-- name: GetGlovoDishNames :many
 select name from glovo_dish
 `
