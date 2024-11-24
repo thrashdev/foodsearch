@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
@@ -39,6 +40,17 @@ func main() {
 	glovoSearchURL := os.Getenv("glovo_url")
 	glovoFiltersURL := os.Getenv("glovo_filters_url")
 	glovoDishURL := os.Getenv("glovo_dishes_url")
+	yandexSearchURL := os.Getenv("yandex_search_url")
+	yandexLatitudeStr := os.Getenv("yandex_latitude")
+	yandexLongitudeStr := os.Getenv("yandex_longitude")
+	yandexLatitude, err := strconv.ParseFloat(yandexLatitudeStr, 64)
+	if err != nil {
+		log.Fatalf("Couldn't parse latitude: %v", err)
+	}
+	yandexLongitude, err := strconv.ParseFloat(yandexLongitudeStr, 64)
+	if err != nil {
+		log.Fatalf("Couldn't parse latitude: %v", err)
+	}
 	port := os.Getenv("PORT")
 	connection_string := os.Getenv("connection_string")
 	ctx := context.Background()
@@ -48,18 +60,30 @@ func main() {
 	}
 	defer conn.Close(ctx)
 	db := database.New(conn)
-	config := &config.Config{
+	cfg := &config.Config{
 		Glovo: config.GlovoConfig{
 			SearchURL:  glovoSearchURL,
 			FiltersURL: glovoFiltersURL,
 			DishURL:    glovoDishURL,
 		},
+		Yandex: config.YandexConfig{
+			SearchURL: yandexSearchURL,
+			Loc:       config.YandexLocation{Longitude: yandexLongitude, Latitude: yandexLatitude},
+		},
 		DB:              *db,
 		UpdateBatchSize: 5,
 	}
 	fmt.Println("Started fetching new restaurants")
-	err = fetcher.CreateNewGlovoRestaurants(config)
-	err = fetcher.CreateNewDishesForRestaurants(config)
+	// err = fetcher.CreateNewGlovoRestaurants(config)
+	// err = fetcher.CreateNewDishesForRestaurants(config)
+	rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
+	fmt.Printf("Created %v restaurants", rowsAffected)
+	// if err != nil {
+	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
+	// }
+	// for _, r := range yandexRestaurants {
+	// 	fmt.Println(r.Name, r.YandexApiSlug)
+	// }
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 

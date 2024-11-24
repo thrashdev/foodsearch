@@ -25,7 +25,7 @@ type dishResponse struct {
 	RestaurantID uuid.UUID
 }
 
-func restaurantDifference(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
+func restaurantDifferenceGlovo(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
 	mb := make(map[string]struct{}, len(dbrNames))
 	for _, name := range dbrNames {
 		mb[name] = struct{}{}
@@ -171,9 +171,9 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 			Restaurant: models.Restaurant{
 				ID:          uuid.New(),
 				Name:        item.SingleData.StoreData.Store.Name,
-				Address:     item.SingleData.StoreData.Store.Address,
-				DeliveryFee: item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
-				PhoneNumber: item.SingleData.StoreData.Store.PhoneNumber,
+				Address:     &item.SingleData.StoreData.Store.Address,
+				DeliveryFee: &item.SingleData.StoreData.Store.DeliveryFeeInfo.Fee,
+				PhoneNumber: &item.SingleData.StoreData.Store.PhoneNumber,
 				CreatedAt:   time.Now(),
 				UpdatedAt:   time.Now(),
 			},
@@ -283,16 +283,16 @@ func CreateNewGlovoRestaurants(cfg *config.Config) error {
 		return err
 	}
 	log.Printf("Fetched %v restaurants from DB\n", len(dbRestaurantNames))
-	restaurantsToAdd := restaurantDifference(newRestaurants, dbRestaurantNames)
+	restaurantsToAdd := restaurantDifferenceGlovo(newRestaurants, dbRestaurantNames)
 	log.Printf("Restaurants to add: %v\n", len(restaurantsToAdd))
 	args := []database.BatchCreateGlovoRestaurantsParams{}
 	for _, rest := range restaurantsToAdd {
 		arg := database.BatchCreateGlovoRestaurantsParams{
 			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
 			Name:              rest.Name,
-			Address:           rest.Address,
-			DeliveryFee:       utils.FloatToNumeric(rest.DeliveryFee),
-			PhoneNumber:       pgtype.Text{String: rest.PhoneNumber, Valid: true},
+			Address:           *rest.Address,
+			DeliveryFee:       utils.FloatToNumeric(*rest.DeliveryFee),
+			PhoneNumber:       pgtype.Text{String: *rest.PhoneNumber, Valid: true},
 			GlovoApiStoreID:   int32(rest.GlovoApiStoreID),
 			GlovoApiAddressID: int32(rest.GlovoApiAddressID),
 			GlovoApiSlug:      rest.GlovoApiSlug,

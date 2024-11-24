@@ -10,9 +10,9 @@ import (
 type Restaurant struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"store_name"`
-	Address     string    `json:"address"`
-	DeliveryFee float64   `json:"delivery_fee"`
-	PhoneNumber string    `json:"phoneNumber"`
+	Address     *string   `json:"address"`
+	DeliveryFee *float64  `json:"delivery_fee"`
+	PhoneNumber *string   `json:"phoneNumber"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -29,9 +29,8 @@ type Dish struct {
 }
 
 type DishCategory struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 type GlovoRestaurant struct {
@@ -45,6 +44,11 @@ type GlovoDish struct {
 	Dish
 	GlovoAPIDishID    int       `json:"id"`
 	GlovoRestaurantID uuid.UUID `json:"glovo_restaurant_id"`
+}
+
+type YandexRestaurant struct {
+	Restaurant
+	YandexApiSlug string
 }
 
 type RestaurantBinding struct {

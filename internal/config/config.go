@@ -8,8 +8,19 @@ type GlovoConfig struct {
 	DishURL    string
 }
 
+type YandexConfig struct {
+	SearchURL string
+	Loc       YandexLocation
+}
+
+type YandexLocation struct {
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
+}
+
 type Config struct {
 	Glovo           GlovoConfig
+	Yandex          YandexConfig
 	UpdateBatchSize int
 	DB              database.Queries
 }

@@ -89,3 +89,42 @@ func (r iteratorForBatchCreateGlovoRestaurants) Err() error {
 func (q *Queries) BatchCreateGlovoRestaurants(ctx context.Context, arg []BatchCreateGlovoRestaurantsParams) (int64, error) {
 	return q.db.CopyFrom(ctx, []string{"glovo_restaurant"}, []string{"id", "name", "address", "delivery_fee", "phone_number", "glovo_api_store_id", "glovo_api_address_id", "glovo_api_slug", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoRestaurants{rows: arg})
 }
+
+// iteratorForBatchCreateYandexRestaurants implements pgx.CopyFromSource.
+type iteratorForBatchCreateYandexRestaurants struct {
+	rows                 []BatchCreateYandexRestaurantsParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForBatchCreateYandexRestaurants) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForBatchCreateYandexRestaurants) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].Name,
+		r.rows[0].Address,
+		r.rows[0].DeliveryFee,
+		r.rows[0].PhoneNumber,
+		r.rows[0].YandexApiSlug,
+		r.rows[0].CreatedAt,
+		r.rows[0].UpdatedAt,
+	}, nil
+}
+
+func (r iteratorForBatchCreateYandexRestaurants) Err() error {
+	return nil
+}
+
+func (q *Queries) BatchCreateYandexRestaurants(ctx context.Context, arg []BatchCreateYandexRestaurantsParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"yandex_restaurant"}, []string{"id", "name", "address", "delivery_fee", "phone_number", "yandex_api_slug", "created_at", "updated_at"}, &iteratorForBatchCreateYandexRestaurants{rows: arg})
+}

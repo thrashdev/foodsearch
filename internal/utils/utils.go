@@ -26,9 +26,9 @@ func DatabaseGlovoRestaurantToModel(dbRest database.GlovoRestaurant) models.Glov
 		Restaurant: models.Restaurant{
 			ID:          dbRest.ID.Bytes,
 			Name:        dbRest.Name,
-			Address:     dbRest.Address,
-			DeliveryFee: deliveryFee.Float64,
-			PhoneNumber: dbRest.PhoneNumber.String,
+			Address:     &dbRest.Address,
+			DeliveryFee: &deliveryFee.Float64,
+			PhoneNumber: &dbRest.PhoneNumber.String,
 			CreatedAt:   dbRest.CreatedAt.Time,
 			UpdatedAt:   dbRest.UpdatedAt.Time,
 		},

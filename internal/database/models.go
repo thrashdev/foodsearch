@@ -39,6 +39,23 @@ type GlovoRestaurant struct {
 }
 
 type RestaurantBinding struct {
-	ID                pgtype.UUID
-	GlovoRestaurantID pgtype.UUID
+	ID                 pgtype.UUID
+	GlovoRestaurantID  pgtype.UUID
+	YandexRestaurantID pgtype.UUID
+}
+
+type YandexFilter struct {
+	ID   pgtype.UUID
+	Name string
+}
+
+type YandexRestaurant struct {
+	ID            pgtype.UUID
+	Name          string
+	Address       pgtype.Text
+	DeliveryFee   pgtype.Numeric
+	PhoneNumber   pgtype.Text
+	YandexApiSlug string
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
 }
