@@ -19,13 +19,13 @@ type Restaurant struct {
 
 // not a part of DB
 type Dish struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	MaxDiscount float64   `json:"max_discount"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID              uuid.UUID `json:"id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Price           float64   `json:"price"`
+	DiscountedPrice float64   `json:"max_discount"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type DishCategory struct {
@@ -49,6 +49,11 @@ type GlovoDish struct {
 type YandexRestaurant struct {
 	Restaurant
 	YandexApiSlug string
+}
+
+type YandexDish struct {
+	Dish
+	YandexApiID int
 }
 
 type RestaurantBinding struct {

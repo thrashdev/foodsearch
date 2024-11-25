@@ -47,3 +47,35 @@ func PrintErrors(errCh chan error) {
 		log.Println(err)
 	}
 }
+
+func DatabaseYandexRestaurantToModel(dbRest database.YandexRestaurant) models.YandexRestaurant {
+	addr := ""
+	if dbRest.Address.Valid {
+		addr = dbRest.Address.String
+	}
+
+	phoneNumber := ""
+	if dbRest.PhoneNumber.Valid {
+		phoneNumber = dbRest.PhoneNumber.String
+	}
+
+	dbFloat, err := dbRest.DeliveryFee.Float64Value()
+	deliveryFee := 0.0
+	if err != nil {
+		if dbFloat.Valid {
+			deliveryFee = dbFloat.Float64
+		}
+	}
+
+	return models.YandexRestaurant{
+		Restaurant: models.Restaurant{
+			ID:          dbRest.ID.Bytes,
+			Name:        dbRest.Name,
+			Address:     &addr,
+			DeliveryFee: &deliveryFee,
+			PhoneNumber: &phoneNumber,
+			CreatedAt:   dbRest.CreatedAt.Time,
+			UpdatedAt:   dbRest.UpdatedAt.Time,
+		},
+		YandexApiSlug: dbRest.YandexApiSlug}
+}

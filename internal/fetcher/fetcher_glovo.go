@@ -69,11 +69,11 @@ func dishGlovoApiIdDifference(dishes []models.GlovoDish, ids []int32) []models.G
 
 }
 
-func findMaxDiscountRate(promos []glovoPromotion) float64 {
+func findMaxDiscount(promos []glovoPromotion) float64 {
 	max := 0.0
 	for _, promo := range promos {
-		if promo.Percentage > max {
-			max = promo.Percentage
+		if promo.Price > max {
+			max = promo.Price
 		}
 	}
 	// fmt.Printf("Returning %v\n", max)
@@ -250,7 +250,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 			Name:              dish.Name,
 			Description:       dish.Description,
 			Price:             utils.FloatToNumeric(dish.Price),
-			Discount:          utils.FloatToNumeric(dish.MaxDiscount),
+			DiscountedPrice:   utils.FloatToNumeric(dish.DiscountedPrice),
 			GlovoApiDishID:    int32(dish.GlovoAPIDishID),
 			GlovoRestaurantID: pgtype.UUID{Bytes: dish.GlovoRestaurantID, Valid: true},
 			CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
@@ -369,17 +369,17 @@ func serializeGlovoDishes(responsePayload []byte, restID uuid.UUID) ([]models.Gl
 	dishes := []models.GlovoDish{}
 	for _, elem := range dishesResponse.Data.Body {
 		for _, dishItem := range elem.Data.Elements {
-			discount := findMaxDiscountRate(dishItem.Data.Promotions)
+			discount := findMaxDiscount(dishItem.Data.Promotions)
 			dishes = append(dishes, models.GlovoDish{
 				GlovoAPIDishID: int(dishItem.Data.ID),
 				Dish: models.Dish{
-					ID:          uuid.New(),
-					Name:        dishItem.Data.Name,
-					Description: dishItem.Data.Description,
-					Price:       dishItem.Data.Price,
-					MaxDiscount: discount,
-					CreatedAt:   time.Now(),
-					UpdatedAt:   time.Now(),
+					ID:              uuid.New(),
+					Name:            dishItem.Data.Name,
+					Description:     dishItem.Data.Description,
+					Price:           dishItem.Data.Price,
+					DiscountedPrice: discount,
+					CreatedAt:       time.Now(),
+					UpdatedAt:       time.Now(),
 				},
 				GlovoRestaurantID: restID,
 			})

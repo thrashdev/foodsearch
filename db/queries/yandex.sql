@@ -7,3 +7,6 @@ SELECT name FROM yandex_filters;
 
 -- name: GetYandexRestaurantSlugs :many
 SELECT yandex_api_slug FROM yandex_restaurant;
+
+-- name: GetYandexRestaurant :one
+select * from yandex_restaurant limit 1;

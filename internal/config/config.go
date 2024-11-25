@@ -9,8 +9,9 @@ type GlovoConfig struct {
 }
 
 type YandexConfig struct {
-	SearchURL string
-	Loc       YandexLocation
+	SearchURL         string
+	RestaurantMenuURL string
+	Loc               YandexLocation
 }
 
 type YandexLocation struct {

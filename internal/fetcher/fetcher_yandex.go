@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +39,10 @@ type YandexSearchFilter struct {
 
 const search_slug = "search_restaurant"
 const search_type = "quickfilter"
+
+const search_url_slug_token = "{restaurant_slug}"
+const search_url_longitude_token = "{longitude}"
+const search_url_latitude_token = "{latitude}"
 
 func restaurantDifferenceYandex(restaurants []models.YandexRestaurant, slugs []string) []models.YandexRestaurant {
 	mb := make(map[string]struct{}, len(slugs))
@@ -76,7 +82,7 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 
 	restsWithDuplicates := []models.YandexRestaurant{}
 	for _, f := range filters {
-		rests, err := fetchYandexRestaurants(cfg, f)
+		rests, err := FetchYandexRestaurants(cfg, f)
 		if err != nil {
 			log.Printf("Error encountered while fetching restaurants :%v", err)
 			continue
@@ -84,18 +90,23 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 		restsWithDuplicates = append(restsWithDuplicates, rests...)
 	}
 
-	// slugs, err := cfg.DB.GetYandexRestaurantSlugs(ctx)
-	// if err != nil {
-	// 	log.Fatalf("Couldn't fetch yandex restaurant slugs, err: %v", err)
-	// }
+	slugs, err := cfg.DB.GetYandexRestaurantSlugs(ctx)
+	if err != nil {
+		log.Fatalf("Couldn't fetch yandex restaurant slugs, err: %v", err)
+	}
 	rests := removeDuplicateYandexRestaurants(restsWithDuplicates)
-	rowsAffected, err = createYandexRestaurants(cfg, rests)
+	newRests := restaurantDifferenceYandex(rests, slugs)
+	rowsAffected, err = createYandexRestaurants(cfg, newRests)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	return rowsAffected
 
 }
+
+// func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
+//
+// }
 
 func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexRestaurantsParams{}
@@ -140,7 +151,7 @@ func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant
 
 }
 
-func fetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants []models.YandexRestaurant, err error) {
+func FetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants []models.YandexRestaurant, err error) {
 	query := YandexSearchQuery{Text: filter,
 		Filters:  []YandexSearchFilter{YandexSearchFilter{Type: search_type, Slug: search_slug}},
 		Selector: "all",
@@ -208,4 +219,48 @@ func fetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants [
 	}
 
 	return allRestaurants, nil
+}
+
+func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []models.YandexDish {
+	url := strings.Replace(cfg.Yandex.RestaurantMenuURL, search_url_slug_token, rest.YandexApiSlug, 1)
+	url = strings.Replace(url, search_url_latitude_token, strconv.FormatFloat(cfg.Yandex.Loc.Latitude, 'f', -1, 64), 1)
+	url = strings.Replace(url, search_url_longitude_token, strconv.FormatFloat(cfg.Yandex.Loc.Longitude, 'f', -1, 64), 1)
+	fmt.Println("URL: ", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Couldn't fetch restaurant menu: %v", err)
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Couldn't read response body, err: %v", err)
+	}
+
+	var yandexResp YandexRestaurantMenuResponse
+	err = json.Unmarshal(respBody, &yandexResp)
+	if err != nil {
+		log.Fatalf("Error parsing YandexMenuResponse: %v", err)
+	}
+
+	dishes := []models.YandexDish{}
+	for _, ct := range yandexResp.Payload.Categories {
+		for _, item := range ct.Items {
+			dish := models.YandexDish{
+				Dish: models.Dish{
+					ID:              uuid.New(),
+					Name:            item.Name,
+					Description:     item.Description,
+					Price:           float64(item.Price),
+					DiscountedPrice: float64(item.PromoPrice),
+					CreatedAt:       time.Now().UTC(),
+					UpdatedAt:       time.Now().UTC(),
+				},
+			}
+			dishes = append(dishes, dish)
+		}
+
+	}
+
+	return dishes
+
 }

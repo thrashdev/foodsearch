@@ -15,3 +15,24 @@ type YandexSearchResponse struct {
 		} `json:"payload"`
 	} `json:"blocks"`
 }
+
+type YandexRestaurantMenuResponse struct {
+	Payload struct {
+		Categories []struct {
+			ID        int64  `json:"id"`
+			Name      string `json:"name"`
+			Available bool   `json:"available"`
+			Items     []struct {
+				ID           int64  `json:"id"`
+				Name         string `json:"name"`
+				Description  string `json:"description"`
+				Available    bool   `json:"available"`
+				InStock      any    `json:"inStock"`
+				Price        int    `json:"price"`
+				DecimalPrice string `json:"decimalPrice"`
+				PromoPrice   int    `json:"promoPrice"`
+				PromoTypes   []any  `json:"promoTypes"`
+			} `json:"items"`
+		} `json:"categories"`
+	} `json:"payload"`
+}

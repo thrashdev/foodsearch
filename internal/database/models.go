@@ -18,7 +18,7 @@ type GlovoDish struct {
 	Name              string
 	Description       string
 	Price             pgtype.Numeric
-	Discount          pgtype.Numeric
+	DiscountedPrice   pgtype.Numeric
 	GlovoApiDishID    int32
 	GlovoRestaurantID pgtype.UUID
 	CreatedAt         pgtype.Timestamp

@@ -46,6 +46,26 @@ func (q *Queries) GetYandexFilters(ctx context.Context) ([]string, error) {
 	return items, nil
 }
 
+const getYandexRestaurant = `-- name: GetYandexRestaurant :one
+select id, name, address, delivery_fee, phone_number, yandex_api_slug, created_at, updated_at from yandex_restaurant limit 1
+`
+
+func (q *Queries) GetYandexRestaurant(ctx context.Context) (YandexRestaurant, error) {
+	row := q.db.QueryRow(ctx, getYandexRestaurant)
+	var i YandexRestaurant
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.DeliveryFee,
+		&i.PhoneNumber,
+		&i.YandexApiSlug,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getYandexRestaurantSlugs = `-- name: GetYandexRestaurantSlugs :many
 SELECT yandex_api_slug FROM yandex_restaurant
 `

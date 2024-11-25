@@ -33,7 +33,7 @@ func (r iteratorForBatchCreateGlovoDishes) Values() ([]interface{}, error) {
 		r.rows[0].Name,
 		r.rows[0].Description,
 		r.rows[0].Price,
-		r.rows[0].Discount,
+		r.rows[0].DiscountedPrice,
 		r.rows[0].GlovoApiDishID,
 		r.rows[0].GlovoRestaurantID,
 		r.rows[0].CreatedAt,
@@ -46,7 +46,7 @@ func (r iteratorForBatchCreateGlovoDishes) Err() error {
 }
 
 func (q *Queries) BatchCreateGlovoDishes(ctx context.Context, arg []BatchCreateGlovoDishesParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"glovo_dish"}, []string{"id", "name", "description", "price", "discount", "glovo_api_dish_id", "glovo_restaurant_id", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoDishes{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"glovo_dish"}, []string{"id", "name", "description", "price", "discounted_price", "glovo_api_dish_id", "glovo_restaurant_id", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoDishes{rows: arg})
 }
 
 // iteratorForBatchCreateGlovoRestaurants implements pgx.CopyFromSource.

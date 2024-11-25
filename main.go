@@ -13,6 +13,7 @@ import (
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
+	"github.com/thrashdev/foodsearch/internal/utils"
 
 	// "github.com/thrashdev/foodsearch/internal/fetcher"
 	// "github.com/thrashdev/foodsearch/internal/models"
@@ -43,6 +44,7 @@ func main() {
 	yandexSearchURL := os.Getenv("yandex_search_url")
 	yandexLatitudeStr := os.Getenv("yandex_latitude")
 	yandexLongitudeStr := os.Getenv("yandex_longitude")
+	yandexRestaurantMenuURL := os.Getenv("yandex_restaurant_menu_url")
 	yandexLatitude, err := strconv.ParseFloat(yandexLatitudeStr, 64)
 	if err != nil {
 		log.Fatalf("Couldn't parse latitude: %v", err)
@@ -67,23 +69,26 @@ func main() {
 			DishURL:    glovoDishURL,
 		},
 		Yandex: config.YandexConfig{
-			SearchURL: yandexSearchURL,
-			Loc:       config.YandexLocation{Longitude: yandexLongitude, Latitude: yandexLatitude},
+			SearchURL:         yandexSearchURL,
+			RestaurantMenuURL: yandexRestaurantMenuURL,
+			Loc:               config.YandexLocation{Longitude: yandexLongitude, Latitude: yandexLatitude},
 		},
 		DB:              *db,
 		UpdateBatchSize: 5,
 	}
 	fmt.Println("Started fetching new restaurants")
-	// err = fetcher.CreateNewGlovoRestaurants(config)
-	// err = fetcher.CreateNewDishesForRestaurants(config)
+	// err = fetcher.CreateNewGlovoRestaurants(cfg)
+	// err = fetcher.CreateNewDishesForRestaurants(cfg)
 	rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
-	fmt.Printf("Created %v restaurants", rowsAffected)
-	// if err != nil {
-	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
-	// }
-	// for _, r := range yandexRestaurants {
-	// 	fmt.Println(r.Name, r.YandexApiSlug)
-	// }
+	fmt.Printf("Created %v restaurants\n", rowsAffected)
+	if err != nil {
+		log.Fatalf("Error fetching yandex restaurants: %v", err)
+	}
+	yandexRest, _ := cfg.DB.GetYandexRestaurant(context.Background())
+	dishes := fetcher.FetchYandexDishes(cfg, utils.DatabaseYandexRestaurantToModel(yandexRest))
+	for _, d := range dishes {
+		fmt.Println(d)
+	}
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 

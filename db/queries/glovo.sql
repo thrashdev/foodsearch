@@ -3,7 +3,7 @@ INSERT INTO glovo_restaurant(id, name, address, delivery_fee, phone_number, glov
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: BatchCreateGlovoDishes :copyfrom
-INSERT INTO glovo_dish(id, name, description, price, discount, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at)
+INSERT INTO glovo_dish(id, name, description, price, discounted_price, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetGlovoRestaurantsToUpdate :many
@@ -31,7 +31,7 @@ select glovo_api_dish_id from glovo_dish;
 -- 	name TEXT NOT NULL,
 -- 	description TEXT NOT NULL,
 -- 	price DECIMAL NOT NULL,
--- 	discount DECIMAL NOT NULL,
+-- 	discounted_price DECIMAL NOT NULL,
 -- 	glovo_api_dish_id INTEGER NOT NULL,
 -- 	glovo_restaurant_id UUID,
 -- 	created_at TIMESTAMP NOT NULL,
