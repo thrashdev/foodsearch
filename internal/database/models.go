@@ -44,6 +44,17 @@ type RestaurantBinding struct {
 	YandexRestaurantID pgtype.UUID
 }
 
+type YandexDish struct {
+	ID                 pgtype.UUID
+	Name               string
+	Description        pgtype.Text
+	Price              pgtype.Numeric
+	DiscountedPrice    pgtype.Numeric
+	YandexRestaurantID pgtype.UUID
+	CreatedAt          pgtype.Timestamp
+	UpdatedAt          pgtype.Timestamp
+}
+
 type YandexFilter struct {
 	ID   pgtype.UUID
 	Name string

@@ -53,7 +53,8 @@ type YandexRestaurant struct {
 
 type YandexDish struct {
 	Dish
-	YandexApiID int
+	YandexRestaurantID uuid.UUID `json:"yandex_restaurant_id"`
+	YandexApiID        int
 }
 
 type RestaurantBinding struct {

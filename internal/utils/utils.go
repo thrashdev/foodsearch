@@ -3,7 +3,9 @@ package utils
 import (
 	"log"
 	"strconv"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -78,4 +80,16 @@ func DatabaseYandexRestaurantToModel(dbRest database.YandexRestaurant) models.Ya
 			UpdatedAt:   dbRest.UpdatedAt.Time,
 		},
 		YandexApiSlug: dbRest.YandexApiSlug}
+}
+
+func GoogleUUIDToPgtype(id uuid.UUID) pgtype.UUID {
+	return pgtype.UUID{Bytes: id, Valid: true}
+}
+
+func StringToPgtypeText(s string) pgtype.Text {
+	return pgtype.Text{String: s, Valid: true}
+}
+
+func TimeToPgtypeTimestamp(t time.Time) pgtype.Timestamp {
+	return pgtype.Timestamp{Time: t, Valid: true}
 }

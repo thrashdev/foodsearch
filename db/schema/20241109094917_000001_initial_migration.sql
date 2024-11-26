@@ -38,6 +38,22 @@ CREATE TABLE yandex_restaurant(
 	created_at TIMESTAMP NOT NULL,
 	updated_at TIMESTAMP NOT NULL
 );
+
+CREATE TABLE yandex_dish(
+	id UUID PRIMARY KEY,
+	name TEXT NOT NULL,
+	description TEXT,
+	price DECIMAL NOT NULL,
+	discounted_price DECIMAL,
+	yandex_restaurant_id UUID,
+	created_at TIMESTAMP,
+	updated_at TIMESTAMP,
+
+	CONSTRAINT fk_yandex_dish_yandex_restaurant_id
+	FOREIGN KEY(yandex_restaurant_id)
+	REFERENCES yandex_restaurant(id)
+);
+
 	-- ID          uuid.UUID `json:"id"`
 	-- Name        string    `json:"store_name"`
 	-- Address     *string   `json:"address"`

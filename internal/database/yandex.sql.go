@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BatchCreateYandexDishesParams struct {
+	ID                 pgtype.UUID
+	Name               string
+	Description        pgtype.Text
+	Price              pgtype.Numeric
+	DiscountedPrice    pgtype.Numeric
+	YandexRestaurantID pgtype.UUID
+	CreatedAt          pgtype.Timestamp
+	UpdatedAt          pgtype.Timestamp
+}
+
 type BatchCreateYandexRestaurantsParams struct {
 	ID            pgtype.UUID
 	Name          string
@@ -20,6 +31,39 @@ type BatchCreateYandexRestaurantsParams struct {
 	YandexApiSlug string
 	CreatedAt     pgtype.Timestamp
 	UpdatedAt     pgtype.Timestamp
+}
+
+const getAllYandexRestaurants = `-- name: GetAllYandexRestaurants :many
+select id, name, address, delivery_fee, phone_number, yandex_api_slug, created_at, updated_at from yandex_restaurant
+`
+
+func (q *Queries) GetAllYandexRestaurants(ctx context.Context) ([]YandexRestaurant, error) {
+	rows, err := q.db.Query(ctx, getAllYandexRestaurants)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []YandexRestaurant
+	for rows.Next() {
+		var i YandexRestaurant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.DeliveryFee,
+			&i.PhoneNumber,
+			&i.YandexApiSlug,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getYandexFilters = `-- name: GetYandexFilters :many

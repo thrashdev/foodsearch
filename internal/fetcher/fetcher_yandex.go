@@ -104,9 +104,33 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 
 }
 
-// func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
-//
-// }
+func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
+	ctx := context.Background()
+	rests, err := cfg.DB.GetAllYandexRestaurants(ctx)
+	if err != nil {
+		log.Fatalf("Error fetching yandex restaurants from DB: %v", err)
+	}
+
+	rowsAffected, err := createnewYandexDishes()
+
+}
+
+func createNewYandexDishes(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
+	args := []database.BatchCreateYandexDishesParams{}
+	for _, d := range dishes {
+		arg := database.BatchCreateYandexDishesParams{
+			ID:                 utils.GoogleUUIDToPgtype(d.ID),
+			Name:               d.Name,
+			Price:              utils.FloatToNumeric(d.Price),
+			DiscountedPrice:    utils.FloatToNumeric(d.DiscountedPrice),
+			Description:        utils.StringToPgtypeText(d.Description),
+			YandexRestaurantID: utils.GoogleUUIDToPgtype(d.YandexRestaurantID),
+			CreatedAt:          utils.TimeToPgtypeTimestamp(d.CreatedAt),
+			UpdatedAt:          utils.TimeToPgtypeTimestamp(d.UpdatedAt),
+		}
+		args = append(args, arg)
+	}
+}
 
 func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexRestaurantsParams{}
