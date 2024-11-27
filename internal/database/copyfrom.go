@@ -116,6 +116,7 @@ func (r iteratorForBatchCreateYandexDishes) Values() ([]interface{}, error) {
 		r.rows[0].Price,
 		r.rows[0].DiscountedPrice,
 		r.rows[0].YandexRestaurantID,
+		r.rows[0].YandexApiID,
 		r.rows[0].CreatedAt,
 		r.rows[0].UpdatedAt,
 	}, nil
@@ -126,7 +127,7 @@ func (r iteratorForBatchCreateYandexDishes) Err() error {
 }
 
 func (q *Queries) BatchCreateYandexDishes(ctx context.Context, arg []BatchCreateYandexDishesParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"yandex_dish"}, []string{"id", "name", "description", "price", "discounted_price", "yandex_restaurant_id", "created_at", "updated_at"}, &iteratorForBatchCreateYandexDishes{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"yandex_dish"}, []string{"id", "name", "description", "price", "discounted_price", "yandex_restaurant_id", "yandex_api_id", "created_at", "updated_at"}, &iteratorForBatchCreateYandexDishes{rows: arg})
 }
 
 // iteratorForBatchCreateYandexRestaurants implements pgx.CopyFromSource.

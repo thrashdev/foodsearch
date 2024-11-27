@@ -73,6 +73,34 @@ func removeDuplicateYandexRestaurants(rests []models.YandexRestaurant) []models.
 	return result
 }
 
+func removeDuplicateYandexDishes(dishes []models.YandexDish) []models.YandexDish {
+	deduped := make(map[int]struct{})
+	result := []models.YandexDish{}
+	for _, d := range dishes {
+		_, exists := deduped[d.YandexApiID]
+		if exists {
+			continue
+		}
+		result = append(result, d)
+		deduped[d.YandexApiID] = struct{}{}
+	}
+	return result
+}
+
+func dishYandexApiIdDifference(dishes []models.YandexDish, ids []int32) []models.YandexDish {
+	mb := make(map[int32]struct{}, len(ids))
+	for _, id := range ids {
+		mb[id] = struct{}{}
+	}
+	uniqueDishes := []models.YandexDish{}
+	for _, dish := range dishes {
+		if _, found := mb[int32(dish.YandexApiID)]; !found {
+			uniqueDishes = append(uniqueDishes, dish)
+		}
+	}
+	return uniqueDishes
+}
+
 func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 	ctx := context.Background()
 	filters, err := cfg.DB.GetYandexFilters(ctx)
@@ -102,34 +130,6 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 	}
 	return rowsAffected
 
-}
-
-func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
-	ctx := context.Background()
-	rests, err := cfg.DB.GetAllYandexRestaurants(ctx)
-	if err != nil {
-		log.Fatalf("Error fetching yandex restaurants from DB: %v", err)
-	}
-
-	rowsAffected, err := createnewYandexDishes()
-
-}
-
-func createNewYandexDishes(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
-	args := []database.BatchCreateYandexDishesParams{}
-	for _, d := range dishes {
-		arg := database.BatchCreateYandexDishesParams{
-			ID:                 utils.GoogleUUIDToPgtype(d.ID),
-			Name:               d.Name,
-			Price:              utils.FloatToNumeric(d.Price),
-			DiscountedPrice:    utils.FloatToNumeric(d.DiscountedPrice),
-			Description:        utils.StringToPgtypeText(d.Description),
-			YandexRestaurantID: utils.GoogleUUIDToPgtype(d.YandexRestaurantID),
-			CreatedAt:          utils.TimeToPgtypeTimestamp(d.CreatedAt),
-			UpdatedAt:          utils.TimeToPgtypeTimestamp(d.UpdatedAt),
-		}
-		args = append(args, arg)
-	}
 }
 
 func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
@@ -173,6 +173,49 @@ func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant
 	}
 	return rowsAffected, err
 
+}
+
+// TODO: Move IO out of this function
+func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
+	ctx := context.Background()
+	rests, err := cfg.DB.GetAllYandexRestaurants(ctx)
+	if err != nil {
+		log.Fatalf("Error fetching yandex restaurants from DB: %v", err)
+	}
+
+	dishesResp := []models.YandexDish{}
+	for _, dbRest := range rests {
+		rest := utils.DatabaseYandexRestaurantToModel(dbRest)
+		dishesPerRest := FetchYandexDishes(cfg, rest)
+		dishesResp = append(dishesResp, dishesPerRest...)
+	}
+	dedupedDishes := removeDuplicateYandexDishes(dishesResp)
+	yandexApiIDS, err := cfg.DB.GetYandexDishApiIDS(ctx)
+	if err != nil {
+		log.Fatalf("Couldn't fetch yandex api ids from DB")
+	}
+	dishes := dishYandexApiIdDifference(dedupedDishes, yandexApiIDS)
+
+	rowsAffected, err = createYandexDishes(cfg, dishes)
+	if err != nil {
+		log.Fatalf("Couldn't create new yandex dishes, %v", err)
+	}
+	return rowsAffected
+
+}
+
+func createYandexDishes(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
+	args := []database.BatchCreateYandexDishesParams{}
+	for _, d := range dishes {
+		arg := utils.SerializeYandexDish(d)
+		args = append(args, arg)
+	}
+	ctx := context.Background()
+	rowsAffected, err = cfg.DB.BatchCreateYandexDishes(ctx, args)
+	if err != nil {
+		return 0, fmt.Errorf("Couldn't create yandex dishes in DB: %v", err)
+	}
+	return rowsAffected, nil
 }
 
 func FetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants []models.YandexRestaurant, err error) {
@@ -279,6 +322,8 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 					CreatedAt:       time.Now().UTC(),
 					UpdatedAt:       time.Now().UTC(),
 				},
+				YandexRestaurantID: rest.ID,
+				YandexApiID:        int(item.ID),
 			}
 			dishes = append(dishes, dish)
 		}

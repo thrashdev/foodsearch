@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "fmt"
 	"context"
 	"fmt"
 	"log"
@@ -13,12 +12,8 @@ import (
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
-	"github.com/thrashdev/foodsearch/internal/utils"
 
-	// "github.com/thrashdev/foodsearch/internal/fetcher"
-	// "github.com/thrashdev/foodsearch/internal/models"
 	"net/http"
-	// "github.com/thrashdev/foodsearch/internal/models"
 )
 
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
@@ -80,15 +75,14 @@ func main() {
 	// err = fetcher.CreateNewGlovoRestaurants(cfg)
 	// err = fetcher.CreateNewDishesForRestaurants(cfg)
 	rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
-	fmt.Printf("Created %v restaurants\n", rowsAffected)
 	if err != nil {
 		log.Fatalf("Error fetching yandex restaurants: %v", err)
 	}
-	yandexRest, _ := cfg.DB.GetYandexRestaurant(context.Background())
-	dishes := fetcher.FetchYandexDishes(cfg, utils.DatabaseYandexRestaurantToModel(yandexRest))
-	for _, d := range dishes {
-		fmt.Println(d)
-	}
+	fmt.Printf("Created %v restaurants\n", rowsAffected)
+
+	rowsAffected = fetcher.CreateNewYandexDishes(cfg)
+	fmt.Printf("Created %v dishes\n", rowsAffected)
+
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 

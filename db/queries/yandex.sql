@@ -3,8 +3,8 @@ INSERT INTO yandex_restaurant(id, name, address, delivery_fee, phone_number, yan
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: BatchCreateYandexDishes :copyfrom
-INSERT INTO yandex_dish(id, name, description, price, discounted_price, yandex_restaurant_id, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+INSERT INTO yandex_dish(id, name, description, price, discounted_price, yandex_restaurant_id, yandex_api_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetYandexFilters :many
 SELECT name FROM yandex_filters;
@@ -18,4 +18,5 @@ select * from yandex_restaurant limit 1;
 -- name: GetAllYandexRestaurants :many
 select * from yandex_restaurant;
 
-
+-- name: GetYandexDishApiIDS :many
+select yandex_api_id from yandex_dish;

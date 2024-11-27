@@ -46,6 +46,7 @@ CREATE TABLE yandex_dish(
 	price DECIMAL NOT NULL,
 	discounted_price DECIMAL,
 	yandex_restaurant_id UUID,
+	yandex_api_id INTEGER NOT NULL UNIQUE,
 	created_at TIMESTAMP,
 	updated_at TIMESTAMP,
 
@@ -103,9 +104,13 @@ drop constraint fk_restaurant_binding_glovo_restaurant_id;
 alter table glovo_dish
 drop constraint fk_glovo_dish_glovo_restaurant_id;
 
+alter table yandex_dish
+drop constraint fk_yandex_dish_yandex_restaurant_id;
+
 drop table restaurant_binding;
 drop table dish_binding;
 drop table glovo_restaurant;
 drop table glovo_dish;
 drop table yandex_restaurant;
+drop table yandex_dish;
 -- +goose StatementEnd

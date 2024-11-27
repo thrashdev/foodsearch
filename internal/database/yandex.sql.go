@@ -18,6 +18,7 @@ type BatchCreateYandexDishesParams struct {
 	Price              pgtype.Numeric
 	DiscountedPrice    pgtype.Numeric
 	YandexRestaurantID pgtype.UUID
+	YandexApiID        int32
 	CreatedAt          pgtype.Timestamp
 	UpdatedAt          pgtype.Timestamp
 }
@@ -59,6 +60,30 @@ func (q *Queries) GetAllYandexRestaurants(ctx context.Context) ([]YandexRestaura
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getYandexDishApiIDS = `-- name: GetYandexDishApiIDS :many
+select yandex_api_id from yandex_dish
+`
+
+func (q *Queries) GetYandexDishApiIDS(ctx context.Context) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getYandexDishApiIDS)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var yandex_api_id int32
+		if err := rows.Scan(&yandex_api_id); err != nil {
+			return nil, err
+		}
+		items = append(items, yandex_api_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

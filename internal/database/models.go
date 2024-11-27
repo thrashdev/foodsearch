@@ -51,6 +51,7 @@ type YandexDish struct {
 	Price              pgtype.Numeric
 	DiscountedPrice    pgtype.Numeric
 	YandexRestaurantID pgtype.UUID
+	YandexApiID        int32
 	CreatedAt          pgtype.Timestamp
 	UpdatedAt          pgtype.Timestamp
 }

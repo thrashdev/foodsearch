@@ -82,6 +82,21 @@ func DatabaseYandexRestaurantToModel(dbRest database.YandexRestaurant) models.Ya
 		YandexApiSlug: dbRest.YandexApiSlug}
 }
 
+func SerializeYandexDish(d models.YandexDish) database.BatchCreateYandexDishesParams {
+	arg := database.BatchCreateYandexDishesParams{
+		ID:                 GoogleUUIDToPgtype(d.ID),
+		Name:               d.Name,
+		Price:              FloatToNumeric(d.Price),
+		DiscountedPrice:    FloatToNumeric(d.DiscountedPrice),
+		Description:        StringToPgtypeText(d.Description),
+		YandexRestaurantID: GoogleUUIDToPgtype(d.YandexRestaurantID),
+		CreatedAt:          TimeToPgtypeTimestamp(d.CreatedAt),
+		UpdatedAt:          TimeToPgtypeTimestamp(d.UpdatedAt),
+		YandexApiID:        int32(d.YandexApiID),
+	}
+	return arg
+}
+
 func GoogleUUIDToPgtype(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{Bytes: id, Valid: true}
 }

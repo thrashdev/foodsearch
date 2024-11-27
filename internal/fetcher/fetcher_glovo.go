@@ -190,7 +190,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewDishesForRestaurants(cfg *config.Config) error {
+func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
 	fmt.Println("Creating new dishes")
 	ctx := context.Background()
 	maxConcurrency := 2
