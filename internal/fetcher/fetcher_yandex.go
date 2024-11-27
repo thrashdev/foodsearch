@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -135,34 +134,7 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexRestaurantsParams{}
 	for _, r := range rests {
-		addr := pgtype.Text{String: "", Valid: false}
-		if r.Address != nil {
-			addr.String = *r.Address
-			addr.Valid = true
-		}
-
-		deliveryFee := pgtype.Numeric{Valid: false}
-		if r.DeliveryFee != nil {
-			deliveryFee = utils.FloatToNumeric(*r.DeliveryFee)
-		}
-
-		phoneNumber := pgtype.Text{String: "", Valid: false}
-		if r.Address != nil {
-			phoneNumber.String = *r.PhoneNumber
-			phoneNumber.Valid = true
-		}
-
-		arg := database.BatchCreateYandexRestaurantsParams{
-			ID:            pgtype.UUID{Bytes: r.ID, Valid: true},
-			Name:          r.Name,
-			Address:       addr,
-			DeliveryFee:   deliveryFee,
-			PhoneNumber:   phoneNumber,
-			YandexApiSlug: r.YandexApiSlug,
-			CreatedAt:     pgtype.Timestamp{Time: time.Now().UTC(), Valid: true},
-			UpdatedAt:     pgtype.Timestamp{Time: time.Now().UTC(), Valid: true},
-		}
-
+		arg := utils.YandexRestModelToDB(r)
 		args = append(args, arg)
 	}
 
@@ -185,7 +157,7 @@ func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
 
 	dishesResp := []models.YandexDish{}
 	for _, dbRest := range rests {
-		rest := utils.DatabaseYandexRestaurantToModel(dbRest)
+		rest := utils.YandexRestDBtoModel(dbRest)
 		dishesPerRest := FetchYandexDishes(cfg, rest)
 		dishesResp = append(dishesResp, dishesPerRest...)
 	}
@@ -207,7 +179,7 @@ func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
 func createYandexDishes(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexDishesParams{}
 	for _, d := range dishes {
-		arg := utils.SerializeYandexDish(d)
+		arg := utils.YandexDishModelToDB(d)
 		args = append(args, arg)
 	}
 	ctx := context.Background()

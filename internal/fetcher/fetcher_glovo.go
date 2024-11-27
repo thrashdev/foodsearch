@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -167,7 +166,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 	}
 
 	for _, item := range glovoResp.Elements {
-		glovoRest := models.GlovoRestaurant{
+		glovoRestaurant := models.GlovoRestaurant{
 			Restaurant: models.Restaurant{
 				ID:          uuid.New(),
 				Name:        item.SingleData.StoreData.Store.Name,
@@ -182,7 +181,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 			GlovoApiSlug:      item.SingleData.StoreData.Store.Slug,
 		}
 
-		restaurants = append(restaurants, glovoRest)
+		restaurants = append(restaurants, glovoRestaurant)
 	}
 
 	return restaurants, nil
@@ -207,7 +206,7 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
 		go func() {
 			defer func() { <-limiter }()
 			// defer fmt.Printf("Fetched dishes for %v\n", dbRest.Name)
-			rest := utils.DatabaseGlovoRestaurantToModel(dbRest)
+			rest := utils.GlovoRestDBtoModel(dbRest)
 			payload := FetchGlovoDishes(rest, cfg.Glovo.DishURL, errCh)
 			payloadsCh <- payload
 		}()
@@ -245,18 +244,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 	ctx := context.Background()
 	args := []database.BatchCreateGlovoDishesParams{}
 	for _, dish := range dishes {
-		arg := database.BatchCreateGlovoDishesParams{
-			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
-			Name:              dish.Name,
-			Description:       dish.Description,
-			Price:             utils.FloatToNumeric(dish.Price),
-			DiscountedPrice:   utils.FloatToNumeric(dish.DiscountedPrice),
-			GlovoApiDishID:    int32(dish.GlovoAPIDishID),
-			GlovoRestaurantID: pgtype.UUID{Bytes: dish.GlovoRestaurantID, Valid: true},
-			CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
-			UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
-		}
-
+		arg := utils.GlovoDishModelToDB(dish)
 		args = append(args, arg)
 	}
 
@@ -287,21 +275,8 @@ func CreateNewGlovoRestaurants(cfg *config.Config) error {
 	log.Printf("Restaurants to add: %v\n", len(restaurantsToAdd))
 	args := []database.BatchCreateGlovoRestaurantsParams{}
 	for _, rest := range restaurantsToAdd {
-		arg := database.BatchCreateGlovoRestaurantsParams{
-			ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
-			Name:              rest.Name,
-			Address:           *rest.Address,
-			DeliveryFee:       utils.FloatToNumeric(*rest.DeliveryFee),
-			PhoneNumber:       pgtype.Text{String: *rest.PhoneNumber, Valid: true},
-			GlovoApiStoreID:   int32(rest.GlovoApiStoreID),
-			GlovoApiAddressID: int32(rest.GlovoApiAddressID),
-			GlovoApiSlug:      rest.GlovoApiSlug,
-			CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
-			UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
-		}
-
+		arg := utils.GlovoRestModelToDB(rest)
 		args = append(args, arg)
-
 	}
 	log.Printf("Prepared to create %v restaurants\n", len(args))
 	rowsAffected, err := cfg.DB.BatchCreateGlovoRestaurants(ctx, args)
@@ -312,19 +287,6 @@ func CreateNewGlovoRestaurants(cfg *config.Config) error {
 	log.Printf("Created %v restaurants\n", rowsAffected)
 	return nil
 }
-
-// func UpdateRestaurants(cfg config.Config) error {
-// 	ctx := context.Background()
-// 	restaurantsToUpdate, err := cfg.DB.GetGlovoRestaurantsToUpdate(ctx, int32(cfg.UpdateBatchSize))
-// 	if err != nil {
-// 		return fmt.Errorf("Couldn't fetch glovo restaurants to update :w", err)
-// 	}
-//
-// }
-//
-// func updateRestaurant(rest models.GlovoRestaurant) error {
-//
-// }
 
 func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {
 	filters, err := fetchGlovoFilters(filtersURL)

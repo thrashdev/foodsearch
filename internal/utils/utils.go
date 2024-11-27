@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ func FloatToNumeric(number float64) (value pgtype.Numeric) {
 	return value
 }
 
-func DatabaseGlovoRestaurantToModel(dbRest database.GlovoRestaurant) models.GlovoRestaurant {
+func GlovoRestDBtoModel(dbRest database.GlovoRestaurant) models.GlovoRestaurant {
 	deliveryFee, err := dbRest.DeliveryFee.Float64Value()
 	if err != nil {
 		log.Fatalf("Error converting pgtype.Numeric to float64, err:%v", err)
@@ -50,7 +51,7 @@ func PrintErrors(errCh chan error) {
 	}
 }
 
-func DatabaseYandexRestaurantToModel(dbRest database.YandexRestaurant) models.YandexRestaurant {
+func YandexRestDBtoModel(dbRest database.YandexRestaurant) models.YandexRestaurant {
 	addr := ""
 	if dbRest.Address.Valid {
 		addr = dbRest.Address.String
@@ -82,10 +83,41 @@ func DatabaseYandexRestaurantToModel(dbRest database.YandexRestaurant) models.Ya
 		YandexApiSlug: dbRest.YandexApiSlug}
 }
 
-func SerializeYandexDish(d models.YandexDish) database.BatchCreateYandexDishesParams {
+func YandexRestModelToDB(rest models.YandexRestaurant) database.BatchCreateYandexRestaurantsParams {
+	addr := pgtype.Text{String: "", Valid: false}
+	if rest.Address != nil {
+		addr.String = *rest.Address
+		addr.Valid = true
+	}
+
+	deliveryFee := pgtype.Numeric{Valid: false}
+	if rest.DeliveryFee != nil {
+		deliveryFee = FloatToNumeric(*rest.DeliveryFee)
+	}
+
+	phoneNumber := pgtype.Text{String: "", Valid: false}
+	if rest.Address != nil {
+		phoneNumber.String = *rest.PhoneNumber
+		phoneNumber.Valid = true
+	}
+	arg := database.BatchCreateYandexRestaurantsParams{
+		ID:            pgtype.UUID{Bytes: rest.ID, Valid: true},
+		Name:          strings.TrimSpace(rest.Name),
+		Address:       addr,
+		DeliveryFee:   deliveryFee,
+		PhoneNumber:   phoneNumber,
+		YandexApiSlug: rest.YandexApiSlug,
+		CreatedAt:     pgtype.Timestamp{Time: time.Now().UTC(), Valid: true},
+		UpdatedAt:     pgtype.Timestamp{Time: time.Now().UTC(), Valid: true},
+	}
+
+	return arg
+}
+
+func YandexDishModelToDB(d models.YandexDish) database.BatchCreateYandexDishesParams {
 	arg := database.BatchCreateYandexDishesParams{
 		ID:                 GoogleUUIDToPgtype(d.ID),
-		Name:               d.Name,
+		Name:               strings.TrimSpace(d.Name),
 		Price:              FloatToNumeric(d.Price),
 		DiscountedPrice:    FloatToNumeric(d.DiscountedPrice),
 		Description:        StringToPgtypeText(d.Description),
@@ -94,6 +126,39 @@ func SerializeYandexDish(d models.YandexDish) database.BatchCreateYandexDishesPa
 		UpdatedAt:          TimeToPgtypeTimestamp(d.UpdatedAt),
 		YandexApiID:        int32(d.YandexApiID),
 	}
+	return arg
+}
+
+func GlovoRestModelToDB(rest models.GlovoRestaurant) database.BatchCreateGlovoRestaurantsParams {
+	arg := database.BatchCreateGlovoRestaurantsParams{
+		ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
+		Name:              strings.TrimSpace(rest.Name),
+		Address:           *rest.Address,
+		DeliveryFee:       FloatToNumeric(*rest.DeliveryFee),
+		PhoneNumber:       pgtype.Text{String: *rest.PhoneNumber, Valid: true},
+		GlovoApiStoreID:   int32(rest.GlovoApiStoreID),
+		GlovoApiAddressID: int32(rest.GlovoApiAddressID),
+		GlovoApiSlug:      rest.GlovoApiSlug,
+		CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+		UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+	}
+
+	return arg
+}
+
+func GlovoDishModelToDB(dish models.GlovoDish) database.BatchCreateGlovoDishesParams {
+	arg := database.BatchCreateGlovoDishesParams{
+		ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
+		Name:              strings.TrimSpace(dish.Name),
+		Description:       dish.Description,
+		Price:             FloatToNumeric(dish.Price),
+		DiscountedPrice:   FloatToNumeric(dish.DiscountedPrice),
+		GlovoApiDishID:    int32(dish.GlovoAPIDishID),
+		GlovoRestaurantID: pgtype.UUID{Bytes: dish.GlovoRestaurantID, Valid: true},
+		CreatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+		UpdatedAt:         pgtype.Timestamp{Time: time.Now().UTC(), InfinityModifier: 0, Valid: true},
+	}
+
 	return arg
 }
 

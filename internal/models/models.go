@@ -58,13 +58,11 @@ type YandexDish struct {
 }
 
 type RestaurantBinding struct {
-	GlovoRestaurantID  int
-	YandexRestaurantID int
-	GISRestaurantID    int
+	GlovoRestaurantID  uuid.UUID
+	YandexRestaurantID uuid.UUID
 }
 
 type DishBinding struct {
-	GlovoDishID  int
-	YandexDishID int
-	GISDishID    int
+	GlovoDishID  uuid.UUID
+	YandexDishID uuid.UUID
 }
