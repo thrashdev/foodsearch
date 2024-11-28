@@ -2,9 +2,12 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/thrashdev/foodsearch/internal/config"
+	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
 	"github.com/thrashdev/foodsearch/internal/utils"
 )
@@ -29,7 +32,7 @@ func getSubset(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []m
 
 }
 
-func sync(cfg *config.Config) {
+func Sync(cfg *config.Config) {
 	ctx := context.Background()
 	glovoRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
@@ -56,5 +59,25 @@ func sync(cfg *config.Config) {
 	bindings = append(bindings, ov...)
 	bindings = append(bindings, glo...)
 	bindings = append(bindings, yo...)
+	for i := 0; i < len(bindings); i++ {
+		b := &bindings[i]
+		b.ID = uuid.New()
+		fmt.Println(b)
+	}
+
+	fmt.Println("Overlap: ")
+	fmt.Println(ov)
+
+	args := []database.BatchCreateRestaurantBindingParams{}
+	for _, b := range bindings {
+		arg := utils.RestaurantBindingModeltoDB(b)
+		args = append(args, arg)
+	}
+
+	rowsAffected, err := cfg.DB.BatchCreateRestaurantBinding(context.Background(), args)
+	if err != nil {
+		log.Fatalf("Couldn't create restaurant bindings in DB: %v", err)
+	}
+	fmt.Printf("Created %v restaurant bindings", rowsAffected)
 
 }

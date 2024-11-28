@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	// "fmt"
 	"log"
 	"os"
 	"strconv"
@@ -71,9 +72,11 @@ func main() {
 		DB:              *db,
 		UpdateBatchSize: 5,
 	}
+
+	fetcher.CreateNewGlovoRestaurants(cfg)
+	fetcher.CreateNewDishesForGlovoRestaurants(cfg)
+
 	fmt.Println("Started fetching new restaurants")
-	// err = fetcher.CreateNewGlovoRestaurants(cfg)
-	// err = fetcher.CreateNewDishesForRestaurants(cfg)
 	rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
 	if err != nil {
 		log.Fatalf("Error fetching yandex restaurants: %v", err)
@@ -82,6 +85,8 @@ func main() {
 
 	rowsAffected = fetcher.CreateNewYandexDishes(cfg)
 	fmt.Printf("Created %v dishes\n", rowsAffected)
+
+	fetcher.Sync(cfg)
 
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)

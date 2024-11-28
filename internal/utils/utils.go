@@ -116,12 +116,12 @@ func YandexRestModelToDB(rest models.YandexRestaurant) database.BatchCreateYande
 
 func YandexDishModelToDB(d models.YandexDish) database.BatchCreateYandexDishesParams {
 	arg := database.BatchCreateYandexDishesParams{
-		ID:                 GoogleUUIDToPgtype(d.ID),
+		ID:                 pgtypeID(d.ID),
 		Name:               strings.TrimSpace(d.Name),
 		Price:              FloatToNumeric(d.Price),
 		DiscountedPrice:    FloatToNumeric(d.DiscountedPrice),
 		Description:        StringToPgtypeText(d.Description),
-		YandexRestaurantID: GoogleUUIDToPgtype(d.YandexRestaurantID),
+		YandexRestaurantID: pgtypeID(d.YandexRestaurantID),
 		CreatedAt:          TimeToPgtypeTimestamp(d.CreatedAt),
 		UpdatedAt:          TimeToPgtypeTimestamp(d.UpdatedAt),
 		YandexApiID:        int32(d.YandexApiID),
@@ -162,7 +162,33 @@ func GlovoDishModelToDB(dish models.GlovoDish) database.BatchCreateGlovoDishesPa
 	return arg
 }
 
-func GoogleUUIDToPgtype(id uuid.UUID) pgtype.UUID {
+func RestaurantBindingModeltoDB(b models.RestaurantBinding) database.BatchCreateRestaurantBindingParams {
+	// glovoID := pgtype.UUID{}
+	// if (b.GlovoRestaurantID == uuid.UUID{}) {
+	// 	glovoID.Valid = false
+	// } else {
+	// 	glovoID = pgtypeID(b.GlovoRestaurantID)
+	// }
+	//
+	// yandexID := pgtype.UUID{}
+	// if (b.YandexRestaurantID == uuid.UUID{}) {
+	// 	yandexID.Valid = false
+	// } else {
+	// 	yandexID = pgtypeID(b.GlovoRestaurantID)
+	// }
+
+	arg := database.BatchCreateRestaurantBindingParams{
+		ID:                 pgtypeID(b.ID),
+		GlovoRestaurantID:  pgtypeID(b.GlovoRestaurantID),
+		YandexRestaurantID: pgtypeID(b.YandexRestaurantID),
+	}
+	return arg
+}
+
+func pgtypeID(id uuid.UUID) pgtype.UUID {
+	if id == uuid.Nil {
+		return pgtype.UUID{Valid: false}
+	}
 	return pgtype.UUID{Bytes: id, Valid: true}
 }
 

@@ -90,6 +90,40 @@ func (q *Queries) BatchCreateGlovoRestaurants(ctx context.Context, arg []BatchCr
 	return q.db.CopyFrom(ctx, []string{"glovo_restaurant"}, []string{"id", "name", "address", "delivery_fee", "phone_number", "glovo_api_store_id", "glovo_api_address_id", "glovo_api_slug", "created_at", "updated_at"}, &iteratorForBatchCreateGlovoRestaurants{rows: arg})
 }
 
+// iteratorForBatchCreateRestaurantBinding implements pgx.CopyFromSource.
+type iteratorForBatchCreateRestaurantBinding struct {
+	rows                 []BatchCreateRestaurantBindingParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForBatchCreateRestaurantBinding) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForBatchCreateRestaurantBinding) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].GlovoRestaurantID,
+		r.rows[0].YandexRestaurantID,
+	}, nil
+}
+
+func (r iteratorForBatchCreateRestaurantBinding) Err() error {
+	return nil
+}
+
+func (q *Queries) BatchCreateRestaurantBinding(ctx context.Context, arg []BatchCreateRestaurantBindingParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"restaurant_binding"}, []string{"id", "glovo_restaurant_id", "yandex_restaurant_id"}, &iteratorForBatchCreateRestaurantBinding{rows: arg})
+}
+
 // iteratorForBatchCreateYandexDishes implements pgx.CopyFromSource.
 type iteratorForBatchCreateYandexDishes struct {
 	rows                 []BatchCreateYandexDishesParams
