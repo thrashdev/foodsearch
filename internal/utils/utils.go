@@ -129,6 +129,30 @@ func YandexDishModelToDB(d models.YandexDish) database.BatchCreateYandexDishesPa
 	return arg
 }
 
+func YandexDishDBtoModel(dish database.YandexDish) models.YandexDish {
+	price, err := dish.Price.Float64Value()
+	if err != nil {
+		log.Fatal(err)
+	}
+	discPrice, err := dish.DiscountedPrice.Float64Value()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return models.YandexDish{
+		Dish: models.Dish{
+			ID:              dish.ID.Bytes,
+			Name:            dish.Name,
+			Description:     dish.Description.String,
+			Price:           price.Float64,
+			DiscountedPrice: discPrice.Float64,
+			CreatedAt:       dish.CreatedAt.Time,
+			UpdatedAt:       dish.UpdatedAt.Time,
+		},
+		YandexRestaurantID: dish.YandexRestaurantID.Bytes,
+		YandexApiID:        int(dish.YandexApiID),
+	}
+}
+
 func GlovoRestModelToDB(rest models.GlovoRestaurant) database.BatchCreateGlovoRestaurantsParams {
 	arg := database.BatchCreateGlovoRestaurantsParams{
 		ID:                pgtype.UUID{Bytes: uuid.New(), Valid: true},
@@ -160,6 +184,31 @@ func GlovoDishModelToDB(dish models.GlovoDish) database.BatchCreateGlovoDishesPa
 	}
 
 	return arg
+}
+
+func GlovoDishDBtoModel(dish database.GlovoDish) models.GlovoDish {
+	price, err := dish.Price.Float64Value()
+	if err != nil {
+		log.Fatal(err)
+	}
+	discPrice, err := dish.DiscountedPrice.Float64Value()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return models.GlovoDish{
+		Dish: models.Dish{
+			ID:              dish.ID.Bytes,
+			Name:            dish.Name,
+			Description:     dish.Description,
+			Price:           price.Float64,
+			DiscountedPrice: discPrice.Float64,
+			CreatedAt:       dish.CreatedAt.Time,
+			UpdatedAt:       dish.UpdatedAt.Time,
+		},
+		GlovoAPIDishID:    int(dish.GlovoApiDishID),
+		GlovoRestaurantID: dish.GlovoRestaurantID.Bytes,
+	}
 }
 
 func RestaurantBindingModeltoDB(b models.RestaurantBinding) database.BatchCreateRestaurantBindingParams {

@@ -6,6 +6,8 @@
 package database
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -13,4 +15,28 @@ type BatchCreateRestaurantBindingParams struct {
 	ID                 pgtype.UUID
 	GlovoRestaurantID  pgtype.UUID
 	YandexRestaurantID pgtype.UUID
+}
+
+const getAllRestaurantBindings = `-- name: GetAllRestaurantBindings :many
+select id, glovo_restaurant_id, yandex_restaurant_id from restaurant_binding
+`
+
+func (q *Queries) GetAllRestaurantBindings(ctx context.Context) ([]RestaurantBinding, error) {
+	rows, err := q.db.Query(ctx, getAllRestaurantBindings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RestaurantBinding
+	for rows.Next() {
+		var i RestaurantBinding
+		if err := rows.Scan(&i.ID, &i.GlovoRestaurantID, &i.YandexRestaurantID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -45,7 +45,7 @@ CREATE TABLE yandex_dish(
 	description TEXT,
 	price DECIMAL NOT NULL,
 	discounted_price DECIMAL,
-	yandex_restaurant_id UUID,
+	yandex_restaurant_id UUID NOT NULL,
 	yandex_api_id INTEGER NOT NULL UNIQUE,
 	created_at TIMESTAMP,
 	updated_at TIMESTAMP,
@@ -80,11 +80,22 @@ CREATE TABLE restaurant_binding(
 
 CREATE TABLE dish_binding(
 	id UUID PRIMARY KEY,
+	restaurant_binding_id UUID,
 	glovo_dish_id UUID,
+	yandex_dish_id UUID,
+
+
+	CONSTRAINT fk_dish_binding_restaurant_binding_id
+	FOREIGN KEY (restaurant_binding_id)
+	REFERENCES restaurant_binding(id),
 
 	CONSTRAINT fk_dish_binding_glovo_dish_id
 	FOREIGN KEY (glovo_dish_id)
-	REFERENCES glovo_dish(id)
+	REFERENCES glovo_dish(id),
+
+	CONSTRAINT fk_dish_binding_yandex_dish_id
+	FOREIGN KEY (yandex_dish_id)
+	REFERENCES yandex_dish(id)
 );
 
 -- +goose StatementEnd

@@ -36,6 +36,40 @@ type BatchCreateGlovoRestaurantsParams struct {
 	UpdatedAt         pgtype.Timestamp
 }
 
+const getAllGlovoDishes = `-- name: GetAllGlovoDishes :many
+select id, name, description, price, discounted_price, glovo_api_dish_id, glovo_restaurant_id, created_at, updated_at from glovo_dish
+`
+
+func (q *Queries) GetAllGlovoDishes(ctx context.Context) ([]GlovoDish, error) {
+	rows, err := q.db.Query(ctx, getAllGlovoDishes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GlovoDish
+	for rows.Next() {
+		var i GlovoDish
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Price,
+			&i.DiscountedPrice,
+			&i.GlovoApiDishID,
+			&i.GlovoRestaurantID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllGlovoRestaurants = `-- name: GetAllGlovoRestaurants :many
 select id, name, address, delivery_fee, phone_number, glovo_api_store_id, glovo_api_address_id, glovo_api_slug, created_at, updated_at from glovo_restaurant
 `

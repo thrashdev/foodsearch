@@ -9,8 +9,10 @@ import (
 )
 
 type DishBinding struct {
-	ID          pgtype.UUID
-	GlovoDishID pgtype.UUID
+	ID                  pgtype.UUID
+	RestaurantBindingID pgtype.UUID
+	GlovoDishID         pgtype.UUID
+	YandexDishID        pgtype.UUID
 }
 
 type GlovoDish struct {

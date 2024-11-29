@@ -34,6 +34,40 @@ type BatchCreateYandexRestaurantsParams struct {
 	UpdatedAt     pgtype.Timestamp
 }
 
+const getAllYandexDishes = `-- name: GetAllYandexDishes :many
+select id, name, description, price, discounted_price, yandex_restaurant_id, yandex_api_id, created_at, updated_at from yandex_dish
+`
+
+func (q *Queries) GetAllYandexDishes(ctx context.Context) ([]YandexDish, error) {
+	rows, err := q.db.Query(ctx, getAllYandexDishes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []YandexDish
+	for rows.Next() {
+		var i YandexDish
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Price,
+			&i.DiscountedPrice,
+			&i.YandexRestaurantID,
+			&i.YandexApiID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllYandexRestaurants = `-- name: GetAllYandexRestaurants :many
 select id, name, address, delivery_fee, phone_number, yandex_api_slug, created_at, updated_at from yandex_restaurant
 `

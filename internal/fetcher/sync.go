@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
@@ -23,16 +24,19 @@ func getSubset(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []m
 		if ok {
 			overlap = append(overlap, models.RestaurantBinding{GlovoRestaurantID: b.GlovoRestaurantID, YandexRestaurantID: yrest.ID})
 		} else {
-			glovoOnly = append(glovoOnly, models.RestaurantBinding{GlovoRestaurantID: b.GlovoRestaurantID})
 			yandexOnly = append(yandexOnly, models.RestaurantBinding{YandexRestaurantID: yrest.ID})
 		}
+	}
+
+	for _, v := range mb {
+		glovoOnly = append(glovoOnly, v)
 	}
 
 	return overlap, glovoOnly, yandexOnly
 
 }
 
-func Sync(cfg *config.Config) {
+func SyncRestaurants(cfg *config.Config) {
 	ctx := context.Background()
 	glovoRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
@@ -80,4 +84,49 @@ func Sync(cfg *config.Config) {
 	}
 	fmt.Printf("Created %v restaurant bindings", rowsAffected)
 
+}
+
+func SyncDishes(cfg *config.Config) (rowsAffected int) {
+	ctx := context.Background()
+	restaurantBindings, err := cfg.DB.GetAllRestaurantBindings(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, rb := range restaurantBindings {
+
+	}
+
+}
+
+func syncDishes(cfg *config.Config, rb database.RestaurantBinding) {
+	ctx := context.Background()
+	result := []models.DishBinding{}
+	glovoDishes := []models.GlovoDish{}
+	yandexDishes := []models.YandexDish{}
+	if rb.GlovoRestaurantID.Valid {
+		dbDishes, err := cfg.DB.GetAllGlovoDishes(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dishes := []models.GlovoDish{}
+		for _, d := range dbDishes {
+			dish := utils.GlovoDishDBtoModel(d)
+			dishes = append(dishes, dish)
+		}
+		glovoDishes = append(glovoDishes, dishes...)
+	}
+
+	if rb.YandexRestaurantID.Valid {
+		dbDishes, err := cfg.DB.GetAllYandexDishes(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dishes := []models.YandexDish{}
+		for _, d := range dbDishes {
+			dish := utils.YandexDishDBtoModel(d)
+			dishes = append(dishes, dish)
+		}
+		yandexDishes = append(yandexDishes, dishes...)
+	}
 }

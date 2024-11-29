@@ -18,5 +18,9 @@ select * from yandex_restaurant limit 1;
 -- name: GetAllYandexRestaurants :many
 select * from yandex_restaurant;
 
+-- name: GetAllYandexDishes :many
+select * from yandex_dish;
+
 -- name: GetYandexDishApiIDS :many
 select yandex_api_id from yandex_dish;
+

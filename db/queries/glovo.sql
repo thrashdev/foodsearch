@@ -26,6 +26,8 @@ select name from glovo_dish;
 -- name: GetGlovoDishAPI_ID :many
 select glovo_api_dish_id from glovo_dish;
 
+-- name: GetAllGlovoDishes :many
+select * from glovo_dish;
 -- CREATE TABLE glovo_dish(
 -- 	id UUID PRIMARY KEY,
 -- 	name TEXT NOT NULL,
