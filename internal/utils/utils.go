@@ -234,6 +234,16 @@ func RestaurantBindingModeltoDB(b models.RestaurantBinding) database.BatchCreate
 	return arg
 }
 
+func DishBindingsModelToDB(b models.DishBinding) database.BatchCreateDishBindingsParams {
+	arg := database.BatchCreateDishBindingsParams{
+		ID:                  pgtypeID(b.ID),
+		RestaurantBindingID: pgtypeID(b.RestaurantBindingID),
+		GlovoDishID:         pgtypeID(b.GlovoDishID),
+		YandexDishID:        pgtypeID(b.YandexDishID),
+	}
+	return arg
+}
+
 func pgtypeID(id uuid.UUID) pgtype.UUID {
 	if id == uuid.Nil {
 		return pgtype.UUID{Valid: false}

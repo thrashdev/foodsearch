@@ -11,6 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BatchCreateDishBindingsParams struct {
+	ID                  pgtype.UUID
+	RestaurantBindingID pgtype.UUID
+	GlovoDishID         pgtype.UUID
+	YandexDishID        pgtype.UUID
+}
+
 type BatchCreateRestaurantBindingParams struct {
 	ID                 pgtype.UUID
 	GlovoRestaurantID  pgtype.UUID

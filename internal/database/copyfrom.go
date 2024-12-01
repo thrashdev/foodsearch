@@ -9,6 +9,41 @@ import (
 	"context"
 )
 
+// iteratorForBatchCreateDishBindings implements pgx.CopyFromSource.
+type iteratorForBatchCreateDishBindings struct {
+	rows                 []BatchCreateDishBindingsParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForBatchCreateDishBindings) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForBatchCreateDishBindings) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].RestaurantBindingID,
+		r.rows[0].GlovoDishID,
+		r.rows[0].YandexDishID,
+	}, nil
+}
+
+func (r iteratorForBatchCreateDishBindings) Err() error {
+	return nil
+}
+
+func (q *Queries) BatchCreateDishBindings(ctx context.Context, arg []BatchCreateDishBindingsParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"dish_binding"}, []string{"id", "restaurant_binding_id", "glovo_dish_id", "yandex_dish_id"}, &iteratorForBatchCreateDishBindings{rows: arg})
+}
+
 // iteratorForBatchCreateGlovoDishes implements pgx.CopyFromSource.
 type iteratorForBatchCreateGlovoDishes struct {
 	rows                 []BatchCreateGlovoDishesParams

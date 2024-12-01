@@ -6,14 +6,13 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
 	"github.com/thrashdev/foodsearch/internal/utils"
 )
 
-func getSubset(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []models.YandexRestaurant) (overlap, glovoOnly, yandexOnly []models.RestaurantBinding) {
+func bindRestaurants(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []models.YandexRestaurant) (overlap, glovoOnly, yandexOnly []models.RestaurantBinding) {
 	mb := make(map[string]models.RestaurantBinding)
 	for _, grest := range glovoRestauraunts {
 		mb[grest.Name] = models.RestaurantBinding{GlovoRestaurantID: grest.ID}
@@ -34,6 +33,28 @@ func getSubset(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []m
 
 	return overlap, glovoOnly, yandexOnly
 
+}
+
+func bindDishes(gdishes []models.GlovoDish, ydishes []models.YandexDish) (overlap, gOnly, yOnly []models.DishBinding) {
+	mb := make(map[string]models.DishBinding)
+	for _, gdish := range gdishes {
+		mb[gdish.Name] = models.DishBinding{ID: gdish.ID}
+	}
+
+	for _, ydish := range ydishes {
+		b, ok := mb[ydish.Name]
+		if ok {
+			overlap = append(overlap, models.DishBinding{GlovoDishID: b.GlovoDishID, YandexDishID: ydish.ID})
+		} else {
+			yOnly = append(yOnly, models.DishBinding{YandexDishID: ydish.ID})
+		}
+	}
+
+	for _, v := range mb {
+		gOnly = append(gOnly, v)
+	}
+
+	return overlap, gOnly, yOnly
 }
 
 func SyncRestaurants(cfg *config.Config) {
@@ -58,7 +79,7 @@ func SyncRestaurants(cfg *config.Config) {
 		yandexRests = append(yandexRests, utils.YandexRestDBtoModel(y))
 	}
 
-	ov, glo, yo := getSubset(glovoRests, yandexRests)
+	ov, glo, yo := bindRestaurants(glovoRests, yandexRests)
 	bindings := []models.RestaurantBinding{}
 	bindings = append(bindings, ov...)
 	bindings = append(bindings, glo...)
@@ -86,7 +107,7 @@ func SyncRestaurants(cfg *config.Config) {
 
 }
 
-func SyncDishes(cfg *config.Config) (rowsAffected int) {
+func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 	ctx := context.Background()
 	restaurantBindings, err := cfg.DB.GetAllRestaurantBindings(ctx)
 	if err != nil {
@@ -94,14 +115,17 @@ func SyncDishes(cfg *config.Config) (rowsAffected int) {
 	}
 
 	for _, rb := range restaurantBindings {
-
+		res := syncDishes(cfg, rb)
+		rowsAffected += res
 	}
+
+	fmt.Printf("Created %v dishes\n", rowsAffected)
+	return rowsAffected
 
 }
 
-func syncDishes(cfg *config.Config, rb database.RestaurantBinding) {
+func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 	ctx := context.Background()
-	result := []models.DishBinding{}
 	glovoDishes := []models.GlovoDish{}
 	yandexDishes := []models.YandexDish{}
 	if rb.GlovoRestaurantID.Valid {
@@ -129,4 +153,27 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) {
 		}
 		yandexDishes = append(yandexDishes, dishes...)
 	}
+
+	ov, glo, yo := bindDishes(glovoDishes, yandexDishes)
+	bindings := []models.DishBinding{}
+	bindings = append(bindings, ov...)
+	bindings = append(bindings, glo...)
+	bindings = append(bindings, yo...)
+	for i := 0; i < len(bindings); i++ {
+		b := &bindings[i]
+		b.ID = uuid.New()
+		b.RestaurantBindingID = rb.ID.Bytes
+		fmt.Println(b)
+	}
+
+	args := []database.BatchCreateDishBindingsParams{}
+	for _, b := range bindings {
+		args = append(args, utils.DishBindingsModelToDB(b))
+	}
+	rowsAffected, err := cfg.DB.BatchCreateDishBindings(ctx, args)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return rowsAffected
 }

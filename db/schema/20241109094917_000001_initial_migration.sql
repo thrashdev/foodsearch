@@ -81,8 +81,8 @@ CREATE TABLE restaurant_binding(
 CREATE TABLE dish_binding(
 	id UUID PRIMARY KEY,
 	restaurant_binding_id UUID,
-	glovo_dish_id UUID,
-	yandex_dish_id UUID,
+	glovo_dish_id UUID UNIQUE,
+	yandex_dish_id UUID UNIQUE,
 
 
 	CONSTRAINT fk_dish_binding_restaurant_binding_id
@@ -111,6 +111,15 @@ drop constraint fk_restaurant_binding_yandex_restaurant_id;
 
 alter table restaurant_binding
 drop constraint fk_restaurant_binding_glovo_restaurant_id;
+
+alter table dish_binding
+drop constraint fk_dish_binding_restaurant_binding_id;
+
+alter table dish_binding
+drop constraint fk_dish_binding_glovo_dish_id;
+
+alter table dish_binding
+drop constraint fk_dish_binding_yandex_dish_id;
 
 alter table glovo_dish
 drop constraint fk_glovo_dish_glovo_restaurant_id;
