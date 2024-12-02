@@ -116,12 +116,12 @@ func YandexRestModelToDB(rest models.YandexRestaurant) database.BatchCreateYande
 
 func YandexDishModelToDB(d models.YandexDish) database.BatchCreateYandexDishesParams {
 	arg := database.BatchCreateYandexDishesParams{
-		ID:                 pgtypeID(d.ID),
+		ID:                 PgtypeID(d.ID),
 		Name:               strings.TrimSpace(d.Name),
 		Price:              FloatToNumeric(d.Price),
 		DiscountedPrice:    FloatToNumeric(d.DiscountedPrice),
 		Description:        StringToPgtypeText(d.Description),
-		YandexRestaurantID: pgtypeID(d.YandexRestaurantID),
+		YandexRestaurantID: PgtypeID(d.YandexRestaurantID),
 		CreatedAt:          TimeToPgtypeTimestamp(d.CreatedAt),
 		UpdatedAt:          TimeToPgtypeTimestamp(d.UpdatedAt),
 		YandexApiID:        int32(d.YandexApiID),
@@ -227,24 +227,24 @@ func RestaurantBindingModeltoDB(b models.RestaurantBinding) database.BatchCreate
 	// }
 
 	arg := database.BatchCreateRestaurantBindingParams{
-		ID:                 pgtypeID(b.ID),
-		GlovoRestaurantID:  pgtypeID(b.GlovoRestaurantID),
-		YandexRestaurantID: pgtypeID(b.YandexRestaurantID),
+		ID:                 PgtypeID(b.ID),
+		GlovoRestaurantID:  PgtypeID(b.GlovoRestaurantID),
+		YandexRestaurantID: PgtypeID(b.YandexRestaurantID),
 	}
 	return arg
 }
 
 func DishBindingsModelToDB(b models.DishBinding) database.BatchCreateDishBindingsParams {
 	arg := database.BatchCreateDishBindingsParams{
-		ID:                  pgtypeID(b.ID),
-		RestaurantBindingID: pgtypeID(b.RestaurantBindingID),
-		GlovoDishID:         pgtypeID(b.GlovoDishID),
-		YandexDishID:        pgtypeID(b.YandexDishID),
+		ID:                  PgtypeID(b.ID),
+		RestaurantBindingID: PgtypeID(b.RestaurantBindingID),
+		GlovoDishID:         PgtypeID(b.GlovoDishID),
+		YandexDishID:        PgtypeID(b.YandexDishID),
 	}
 	return arg
 }
 
-func pgtypeID(id uuid.UUID) pgtype.UUID {
+func PgtypeID(id uuid.UUID) pgtype.UUID {
 	if id == uuid.Nil {
 		return pgtype.UUID{Valid: false}
 	}

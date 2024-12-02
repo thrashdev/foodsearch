@@ -66,8 +66,8 @@ CREATE TABLE yandex_dish(
 
 CREATE TABLE restaurant_binding(
 	id UUID PRIMARY KEY,
-	glovo_restaurant_id UUID,
-	yandex_restaurant_id UUID,
+	glovo_restaurant_id UUID UNIQUE,
+	yandex_restaurant_id UUID UNIQUE,
 
 	CONSTRAINT fk_restaurant_binding_glovo_restaurant_id
 	FOREIGN KEY (glovo_restaurant_id)
@@ -103,9 +103,6 @@ CREATE TABLE dish_binding(
 
 -- +goose Down
 -- +goose StatementBegin
-alter table dish_binding
-drop constraint fk_dish_binding_glovo_dish_id;
-
 alter table restaurant_binding
 drop constraint fk_restaurant_binding_yandex_restaurant_id;
 

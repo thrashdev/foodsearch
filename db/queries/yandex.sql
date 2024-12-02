@@ -24,3 +24,6 @@ select * from yandex_dish;
 -- name: GetYandexDishApiIDS :many
 select yandex_api_id from yandex_dish;
 
+-- name: GetYandexDishesForRestaurant :many
+select * from yandex_dish
+where yandex_restaurant_id = $1;

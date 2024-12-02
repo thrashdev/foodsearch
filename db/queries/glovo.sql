@@ -28,36 +28,7 @@ select glovo_api_dish_id from glovo_dish;
 
 -- name: GetAllGlovoDishes :many
 select * from glovo_dish;
--- CREATE TABLE glovo_dish(
--- 	id UUID PRIMARY KEY,
--- 	name TEXT NOT NULL,
--- 	description TEXT NOT NULL,
--- 	price DECIMAL NOT NULL,
--- 	discounted_price DECIMAL NOT NULL,
--- 	glovo_api_dish_id INTEGER NOT NULL,
--- 	glovo_restaurant_id UUID,
--- 	created_at TIMESTAMP NOT NULL,
--- 	updated_at TIMESTAMP NOT NULL,
--- 	CONSTRAINT fk_glovo_dish_glovo_restaurant_id
--- 	FOREIGN KEY (glovo_restaurant_id)
--- 	REFERENCES glovo_restaurant(id)
--- );
--- CREATE TABLE glovo_restaurant(
--- 	id UUID PRIMARY KEY,
--- 	name TEXT NOT NULL,
--- 	address TEXT NOT NULL,
--- 	delivery_fee DECIMAL NOT NULL,
--- 	phone_number TEXT,
--- 	glovo_api_store_id INTEGER NOT NULL,
--- 	glovo_api_address_id INTEGER NOT NULL,
--- 	created_at TIMESTAMP NOT NULL,
--- 	updated_at TIMESTAMP NOT NULL
--- );
---
--- CREATE TABLE restaurant_binding(
--- 	id UUID PRIMARY KEY,
--- 	glovo_restaurant_id UUID,
--- 	CONSTRAINT fk_restaurant_binding_glovo_restaurant_id
--- 	FOREIGN KEY (glovo_restaurant_id)
--- 	REFERENCES glovo_restaurant(id)
--- );
+
+-- name: GetGlovoDishesForRestaurant :many
+select * from glovo_dish
+where glovo_restaurant_id = $1;

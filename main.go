@@ -72,19 +72,20 @@ func main() {
 		UpdateBatchSize: 5,
 	}
 
-	fetcher.CreateNewGlovoRestaurants(cfg)
-	fetcher.CreateNewDishesForGlovoRestaurants(cfg)
-	// fmt.Println("Started fetching new restaurants")
-	rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
-	if err != nil {
-		log.Fatalf("Error fetching yandex restaurants: %v", err)
-	}
-	fmt.Printf("Created %v restaurants\n", rowsAffected)
-
-	rowsAffected = fetcher.CreateNewYandexDishes(cfg)
+	rowsAffected := 0
+	// fetcher.CreateNewGlovoRestaurants(cfg)
+	// fetcher.CreateNewDishesForGlovoRestaurants(cfg)
+	// // fmt.Println("Started fetching new restaurants")
+	// rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
+	// if err != nil {
+	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
+	// }
+	// fmt.Printf("Created %v restaurants\n", rowsAffected)
+	//
+	// rowsAffected = fetcher.CreateNewYandexDishes(cfg)
 	fmt.Printf("Created %v dishes\n", rowsAffected)
 
-	fetcher.SyncRestaurants(cfg)
+	// fetcher.SyncRestaurants(cfg)
 	fetcher.SyncDishes(cfg)
 
 	serveMux := http.NewServeMux()

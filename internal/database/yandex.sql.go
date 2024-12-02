@@ -125,6 +125,41 @@ func (q *Queries) GetYandexDishApiIDS(ctx context.Context) ([]int32, error) {
 	return items, nil
 }
 
+const getYandexDishesForRestaurant = `-- name: GetYandexDishesForRestaurant :many
+select id, name, description, price, discounted_price, yandex_restaurant_id, yandex_api_id, created_at, updated_at from yandex_dish
+where yandex_restaurant_id = $1
+`
+
+func (q *Queries) GetYandexDishesForRestaurant(ctx context.Context, yandexRestaurantID pgtype.UUID) ([]YandexDish, error) {
+	rows, err := q.db.Query(ctx, getYandexDishesForRestaurant, yandexRestaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []YandexDish
+	for rows.Next() {
+		var i YandexDish
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Price,
+			&i.DiscountedPrice,
+			&i.YandexRestaurantID,
+			&i.YandexApiID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getYandexFilters = `-- name: GetYandexFilters :many
 SELECT name FROM yandex_filters
 `

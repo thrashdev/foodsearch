@@ -13,22 +13,27 @@ import (
 )
 
 func bindRestaurants(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []models.YandexRestaurant) (overlap, glovoOnly, yandexOnly []models.RestaurantBinding) {
-	mb := make(map[string]models.RestaurantBinding)
+	mb := make(map[string]uuid.UUID)
 	for _, grest := range glovoRestauraunts {
-		mb[grest.Name] = models.RestaurantBinding{GlovoRestaurantID: grest.ID}
+		mb[grest.Name] = grest.ID
 	}
 
+	extracted := make(map[string]struct{})
 	for _, yrest := range yandexRestaurants {
-		b, ok := mb[yrest.Name]
+		grestID, ok := mb[yrest.Name]
 		if ok {
-			overlap = append(overlap, models.RestaurantBinding{GlovoRestaurantID: b.GlovoRestaurantID, YandexRestaurantID: yrest.ID})
+			overlap = append(overlap, models.RestaurantBinding{GlovoRestaurantID: grestID, YandexRestaurantID: yrest.ID})
+			extracted[yrest.Name] = struct{}{}
 		} else {
 			yandexOnly = append(yandexOnly, models.RestaurantBinding{YandexRestaurantID: yrest.ID})
 		}
 	}
 
-	for _, v := range mb {
-		glovoOnly = append(glovoOnly, v)
+	for _, v := range glovoRestauraunts {
+		_, ok := extracted[v.Name]
+		if !ok {
+			glovoOnly = append(glovoOnly, models.RestaurantBinding{GlovoRestaurantID: v.ID})
+		}
 	}
 
 	return overlap, glovoOnly, yandexOnly
@@ -36,22 +41,27 @@ func bindRestaurants(glovoRestauraunts []models.GlovoRestaurant, yandexRestauran
 }
 
 func bindDishes(gdishes []models.GlovoDish, ydishes []models.YandexDish) (overlap, gOnly, yOnly []models.DishBinding) {
-	mb := make(map[string]models.DishBinding)
+	mb := make(map[string]uuid.UUID)
 	for _, gdish := range gdishes {
-		mb[gdish.Name] = models.DishBinding{ID: gdish.ID}
+		mb[gdish.Name] = gdish.ID
 	}
 
+	extracted := make(map[string]struct{})
 	for _, ydish := range ydishes {
-		b, ok := mb[ydish.Name]
+		gdishID, ok := mb[ydish.Name]
 		if ok {
-			overlap = append(overlap, models.DishBinding{GlovoDishID: b.GlovoDishID, YandexDishID: ydish.ID})
+			overlap = append(overlap, models.DishBinding{GlovoDishID: gdishID, YandexDishID: ydish.ID})
+			extracted[ydish.Name] = struct{}{}
 		} else {
 			yOnly = append(yOnly, models.DishBinding{YandexDishID: ydish.ID})
 		}
 	}
 
-	for _, v := range mb {
-		gOnly = append(gOnly, v)
+	for _, v := range gdishes {
+		_, ok := extracted[v.Name]
+		if !ok {
+			gOnly = append(gOnly, models.DishBinding{GlovoDishID: v.ID})
+		}
 	}
 
 	return overlap, gOnly, yOnly
@@ -107,6 +117,7 @@ func SyncRestaurants(cfg *config.Config) {
 
 }
 
+// TODO: fetch only restaurant bindings that don't have dishes already
 func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 	ctx := context.Background()
 	restaurantBindings, err := cfg.DB.GetAllRestaurantBindings(ctx)
@@ -125,11 +136,13 @@ func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 }
 
 func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
+	fmt.Println("CREATING DISHES FOR %v", uuid.UUID(rb.ID.Bytes))
 	ctx := context.Background()
 	glovoDishes := []models.GlovoDish{}
 	yandexDishes := []models.YandexDish{}
 	if rb.GlovoRestaurantID.Valid {
-		dbDishes, err := cfg.DB.GetAllGlovoDishes(ctx)
+		fmt.Println("Glovo RestaurantID valid")
+		dbDishes, err := cfg.DB.GetGlovoDishesForRestaurant(ctx, rb.GlovoRestaurantID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -142,7 +155,8 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 	}
 
 	if rb.YandexRestaurantID.Valid {
-		dbDishes, err := cfg.DB.GetAllYandexDishes(ctx)
+		fmt.Println("Yandex RestaurantID valid")
+		dbDishes, err := cfg.DB.GetYandexDishesForRestaurant(ctx, rb.YandexRestaurantID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -163,7 +177,7 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 		b := &bindings[i]
 		b.ID = uuid.New()
 		b.RestaurantBindingID = rb.ID.Bytes
-		fmt.Println(b)
+		// fmt.Println(b)
 	}
 
 	args := []database.BatchCreateDishBindingsParams{}
