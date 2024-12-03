@@ -258,3 +258,13 @@ func StringToPgtypeText(s string) pgtype.Text {
 func TimeToPgtypeTimestamp(t time.Time) pgtype.Timestamp {
 	return pgtype.Timestamp{Time: t, Valid: true}
 }
+
+func SliceContains[S []K, K comparable](collection S, element K) bool {
+	for _, el := range collection {
+		if el == element {
+			return true
+		}
+	}
+
+	return false
+}

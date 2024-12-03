@@ -131,7 +131,6 @@ func SyncRestaurants(cfg *config.Config) {
 
 }
 
-// TODO: fetch only restaurant bindings that don't have dishes already
 func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 	ctx := context.Background()
 	restaurantBindings, err := cfg.DB.GetRestaurantBindingsToUpdate(ctx)

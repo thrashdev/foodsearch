@@ -36,7 +36,10 @@ type YandexSearchFilter struct {
 	Slug string `json:"slug"`
 }
 
-var yandex_categories_blacklist = []string{"напитки", "хлеб", "закуски"}
+var yandex_categories_blacklist = []string{"напитки", "хлеб", "закуски", "дополнительно", "соусы",
+	"горячие напитки", "холодные напитки", "соки", "бутылочное", "к пиву", "пиво бутылочное", "сигареты",
+	"лимонады и айс-ти", "кофе", "алкогольные напитки", "вино", "добавки", "алкоголь", "пиво",
+	"гарниры", "гарнир", "чаи", "полуфабрикаты", "безалкогольные напитки"}
 
 const search_slug = "search_restaurant"
 const search_type = "quickfilter"
@@ -286,9 +289,10 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 	dishes := []models.YandexDish{}
 	for _, ct := range yandexResp.Payload.Categories {
 		categoryName := strings.ToLower(ct.Name)
-		if categoryName == "напитки" || categoryName == "закуски" {
+		if utils.SliceContains(yandex_categories_blacklist, categoryName) {
 			continue
 		}
+		fmt.Printf("Yandex Category: %v\n", categoryName)
 		for _, item := range ct.Items {
 			dish := models.YandexDish{
 				Dish: models.Dish{
@@ -303,6 +307,7 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 				YandexRestaurantID: rest.ID,
 				YandexApiID:        int(item.ID),
 			}
+			fmt.Printf("	- %v\n", item.Name)
 			dishes = append(dishes, dish)
 		}
 
