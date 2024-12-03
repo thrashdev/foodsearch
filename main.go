@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"log"
 	"os"
 	"strconv"
@@ -72,19 +72,19 @@ func main() {
 		UpdateBatchSize: 5,
 	}
 
-	rowsAffected := 0
+	// var rowsAffected int64
 	// fetcher.CreateNewGlovoRestaurants(cfg)
 	// fetcher.CreateNewDishesForGlovoRestaurants(cfg)
 	// // fmt.Println("Started fetching new restaurants")
-	// rowsAffected := fetcher.CreateNewYandexRestaurants(cfg)
+	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
 	// if err != nil {
 	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
 	// }
 	// fmt.Printf("Created %v restaurants\n", rowsAffected)
 	//
 	// rowsAffected = fetcher.CreateNewYandexDishes(cfg)
-	fmt.Printf("Created %v dishes\n", rowsAffected)
-
+	// fmt.Printf("Created %v dishes\n", rowsAffected)
+	//
 	// fetcher.SyncRestaurants(cfg)
 	fetcher.SyncDishes(cfg)
 

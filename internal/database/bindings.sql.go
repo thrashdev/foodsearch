@@ -47,3 +47,29 @@ func (q *Queries) GetAllRestaurantBindings(ctx context.Context) ([]RestaurantBin
 	}
 	return items, nil
 }
+
+const getRestaurantBindingsToUpdate = `-- name: GetRestaurantBindingsToUpdate :many
+select distinct rb.id, rb.glovo_restaurant_id, rb.yandex_restaurant_id from restaurant_binding rb
+left join dish_binding db on rb.id = db.restaurant_binding_id
+where db.id is NULL
+`
+
+func (q *Queries) GetRestaurantBindingsToUpdate(ctx context.Context) ([]RestaurantBinding, error) {
+	rows, err := q.db.Query(ctx, getRestaurantBindingsToUpdate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RestaurantBinding
+	for rows.Next() {
+		var i RestaurantBinding
+		if err := rows.Scan(&i.ID, &i.GlovoRestaurantID, &i.YandexRestaurantID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

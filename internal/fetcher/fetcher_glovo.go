@@ -221,7 +221,11 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
 	fmt.Println("Collected all responses")
 	dishesD := []models.GlovoDish{}
 	for p := range payloadsCh {
-		dishesPerRestaurant, _ := serializeGlovoDishes(p.Payload, p.RestaurantID)
+		dishesPerRestaurant, err := serializeGlovoDishes(p.Payload, p.RestaurantID)
+		if err != nil {
+			log.Printf("Error when serializing glovo dishes: %v", err)
+			continue
+		}
 		dishesD = append(dishesD, dishesPerRestaurant...)
 	}
 	fmt.Println("Prepped all dishes")
@@ -330,6 +334,9 @@ func serializeGlovoDishes(responsePayload []byte, restID uuid.UUID) ([]models.Gl
 
 	dishes := []models.GlovoDish{}
 	for _, elem := range dishesResponse.Data.Body {
+		if strings.ToLower(elem.Data.Title) == "напитки" {
+			continue
+		}
 		for _, dishItem := range elem.Data.Elements {
 			discount := findMaxDiscount(dishItem.Data.Promotions)
 			dishes = append(dishes, models.GlovoDish{

@@ -36,6 +36,8 @@ type YandexSearchFilter struct {
 	Slug string `json:"slug"`
 }
 
+var yandex_categories_blacklist = []string{"напитки", "хлеб", "закуски"}
+
 const search_slug = "search_restaurant"
 const search_type = "quickfilter"
 
@@ -283,6 +285,10 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 
 	dishes := []models.YandexDish{}
 	for _, ct := range yandexResp.Payload.Categories {
+		categoryName := strings.ToLower(ct.Name)
+		if categoryName == "напитки" || categoryName == "закуски" {
+			continue
+		}
 		for _, item := range ct.Items {
 			dish := models.YandexDish{
 				Dish: models.Dish{

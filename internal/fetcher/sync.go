@@ -12,6 +12,20 @@ import (
 	"github.com/thrashdev/foodsearch/internal/utils"
 )
 
+func printDuplicates(dishBindings []models.DishBinding) {
+	mb := make(map[uuid.UUID]struct{})
+	for _, db := range dishBindings {
+		_, ok := mb[db.GlovoDishID]
+		if ok && db.GlovoDishID != uuid.Nil {
+			fmt.Printf("Duplicate key: %v\n", db.GlovoDishID)
+		} else {
+			mb[db.GlovoDishID] = struct{}{}
+			fmt.Printf("Added key: %v\n", db.GlovoDishID)
+		}
+	}
+
+}
+
 func bindRestaurants(glovoRestauraunts []models.GlovoRestaurant, yandexRestaurants []models.YandexRestaurant) (overlap, glovoOnly, yandexOnly []models.RestaurantBinding) {
 	mb := make(map[string]uuid.UUID)
 	for _, grest := range glovoRestauraunts {
@@ -46,19 +60,19 @@ func bindDishes(gdishes []models.GlovoDish, ydishes []models.YandexDish) (overla
 		mb[gdish.Name] = gdish.ID
 	}
 
-	extracted := make(map[string]struct{})
+	extracted := make(map[uuid.UUID]struct{})
 	for _, ydish := range ydishes {
 		gdishID, ok := mb[ydish.Name]
 		if ok {
 			overlap = append(overlap, models.DishBinding{GlovoDishID: gdishID, YandexDishID: ydish.ID})
-			extracted[ydish.Name] = struct{}{}
+			extracted[gdishID] = struct{}{}
 		} else {
 			yOnly = append(yOnly, models.DishBinding{YandexDishID: ydish.ID})
 		}
 	}
 
 	for _, v := range gdishes {
-		_, ok := extracted[v.Name]
+		_, ok := extracted[v.ID]
 		if !ok {
 			gOnly = append(gOnly, models.DishBinding{GlovoDishID: v.ID})
 		}
@@ -120,7 +134,7 @@ func SyncRestaurants(cfg *config.Config) {
 // TODO: fetch only restaurant bindings that don't have dishes already
 func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 	ctx := context.Background()
-	restaurantBindings, err := cfg.DB.GetAllRestaurantBindings(ctx)
+	restaurantBindings, err := cfg.DB.GetRestaurantBindingsToUpdate(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +150,7 @@ func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 }
 
 func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
-	fmt.Println("CREATING DISHES FOR %v", uuid.UUID(rb.ID.Bytes))
+	fmt.Printf("CREATING DISHES FOR %v\n", uuid.UUID(rb.ID.Bytes))
 	ctx := context.Background()
 	glovoDishes := []models.GlovoDish{}
 	yandexDishes := []models.YandexDish{}
@@ -152,6 +166,9 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 			dishes = append(dishes, dish)
 		}
 		glovoDishes = append(glovoDishes, dishes...)
+		for _, d := range glovoDishes {
+			fmt.Printf("Glovo DishID: %v\n", d.ID)
+		}
 	}
 
 	if rb.YandexRestaurantID.Valid {
@@ -166,6 +183,9 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 			dishes = append(dishes, dish)
 		}
 		yandexDishes = append(yandexDishes, dishes...)
+		for _, d := range yandexDishes {
+			fmt.Printf("Yandex DishID: %v\n", d.ID)
+		}
 	}
 
 	ov, glo, yo := bindDishes(glovoDishes, yandexDishes)
@@ -179,6 +199,12 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 		b.RestaurantBindingID = rb.ID.Bytes
 		// fmt.Println(b)
 	}
+
+	for _, b := range bindings {
+		fmt.Printf("binding: %v\n", b)
+	}
+
+	printDuplicates(bindings)
 
 	args := []database.BatchCreateDishBindingsParams{}
 	for _, b := range bindings {
