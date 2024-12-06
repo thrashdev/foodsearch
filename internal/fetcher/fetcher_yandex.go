@@ -292,7 +292,7 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 		if utils.SliceContains(yandex_categories_blacklist, categoryName) {
 			continue
 		}
-		fmt.Printf("Yandex Category: %v\n", categoryName)
+		// fmt.Printf("Yandex Category: %v\n", categoryName)
 		for _, item := range ct.Items {
 			dish := models.YandexDish{
 				Dish: models.Dish{
@@ -307,7 +307,7 @@ func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []model
 				YandexRestaurantID: rest.ID,
 				YandexApiID:        int(item.ID),
 			}
-			fmt.Printf("	- %v\n", item.Name)
+			// fmt.Printf("	- %v\n", item.Name)
 			dishes = append(dishes, dish)
 		}
 

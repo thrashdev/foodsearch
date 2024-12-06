@@ -263,7 +263,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewGlovoRestaurants(cfg *config.Config) error {
+func CreateNewGlovoRestaurants(cfg *config.Config, errCh chan error) error {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
 		return err

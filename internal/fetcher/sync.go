@@ -54,7 +54,7 @@ func bindRestaurants(glovoRestauraunts []models.GlovoRestaurant, yandexRestauran
 
 }
 
-func bindDishes(gdishes []models.GlovoDish, ydishes []models.YandexDish) (overlap, gOnly, yOnly []models.DishBinding) {
+func bindDishes(rbID uuid.UUID, gdishes []models.GlovoDish, ydishes []models.YandexDish) (overlap, gOnly, yOnly []models.DishBinding) {
 	mb := make(map[string]uuid.UUID)
 	for _, gdish := range gdishes {
 		mb[gdish.Name] = gdish.ID
@@ -64,21 +64,54 @@ func bindDishes(gdishes []models.GlovoDish, ydishes []models.YandexDish) (overla
 	for _, ydish := range ydishes {
 		gdishID, ok := mb[ydish.Name]
 		if ok {
-			overlap = append(overlap, models.DishBinding{GlovoDishID: gdishID, YandexDishID: ydish.ID})
+			b, err := makeDishBinding(rbID, gdishID, ydish.ID)
+			if err != nil {
+				log.Printf("Error caught when creating dish binding: %v", err)
+				continue
+			}
+
+			overlap = append(overlap, b)
 			extracted[gdishID] = struct{}{}
 		} else {
-			yOnly = append(yOnly, models.DishBinding{YandexDishID: ydish.ID})
+			b, err := makeDishBinding(rbID, uuid.Nil, ydish.ID)
+			if err != nil {
+				log.Printf("Error caught when creating dish binding: %v", err)
+				continue
+			}
+			yOnly = append(yOnly, b)
 		}
 	}
 
 	for _, v := range gdishes {
 		_, ok := extracted[v.ID]
 		if !ok {
-			gOnly = append(gOnly, models.DishBinding{GlovoDishID: v.ID})
+			b, err := makeDishBinding(rbID, v.ID, uuid.Nil)
+			if err != nil {
+				log.Printf("Error caught when creating dish binding: %v", err)
+				continue
+			}
+			gOnly = append(gOnly, b)
 		}
 	}
 
 	return overlap, gOnly, yOnly
+}
+
+func makeDishBinding(rbID, gdishID, ydishID uuid.UUID) (models.DishBinding, error) {
+	if rbID == uuid.Nil {
+		return models.DishBinding{}, fmt.Errorf("Restaurant binding ID can't be null when creating dish binding")
+	}
+
+	if gdishID == uuid.Nil && ydishID == uuid.Nil {
+		return models.DishBinding{}, fmt.Errorf("Both yandex dish ID and glovo dish ID can't be null when creating a dish binding")
+	}
+
+	return models.DishBinding{
+		ID:                  uuid.New(),
+		RestaurantBindingID: rbID,
+		GlovoDishID:         gdishID,
+		YandexDishID:        ydishID,
+	}, nil
 }
 
 func SyncRestaurants(cfg *config.Config) {
@@ -165,9 +198,9 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 			dishes = append(dishes, dish)
 		}
 		glovoDishes = append(glovoDishes, dishes...)
-		for _, d := range glovoDishes {
-			fmt.Printf("Glovo DishID: %v\n", d.ID)
-		}
+		// for _, d := range glovoDishes {
+		// 	fmt.Printf("Glovo DishID: %v\n", d.ID)
+		// }
 	}
 
 	if rb.YandexRestaurantID.Valid {
@@ -182,28 +215,28 @@ func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
 			dishes = append(dishes, dish)
 		}
 		yandexDishes = append(yandexDishes, dishes...)
-		for _, d := range yandexDishes {
-			fmt.Printf("Yandex DishID: %v\n", d.ID)
-		}
+		// for _, d := range yandexDishes {
+		// 	fmt.Printf("Yandex DishID: %v\n", d.ID)
+		// }
 	}
 
-	ov, glo, yo := bindDishes(glovoDishes, yandexDishes)
+	ov, glo, yo := bindDishes(rb.ID.Bytes, glovoDishes, yandexDishes)
 	bindings := []models.DishBinding{}
 	bindings = append(bindings, ov...)
 	bindings = append(bindings, glo...)
 	bindings = append(bindings, yo...)
-	for i := 0; i < len(bindings); i++ {
-		b := &bindings[i]
-		b.ID = uuid.New()
-		b.RestaurantBindingID = rb.ID.Bytes
-		// fmt.Println(b)
-	}
+	// for i := 0; i < len(bindings); i++ {
+	// 	b := &bindings[i]
+	// 	b.ID = uuid.New()
+	// 	b.RestaurantBindingID = rb.ID.Bytes
+	// 	// fmt.Println(b)
+	// }
 
-	for _, b := range bindings {
-		fmt.Printf("binding: %v\n", b)
-	}
+	// for _, b := range bindings {
+	// 	fmt.Printf("binding: %v\n", b)
+	// }
 
-	printDuplicates(bindings)
+	// printDuplicates(bindings)
 
 	args := []database.BatchCreateDishBindingsParams{}
 	for _, b := range bindings {

@@ -81,8 +81,8 @@ CREATE TABLE restaurant_binding(
 CREATE TABLE dish_binding(
 	id UUID PRIMARY KEY,
 	restaurant_binding_id UUID,
-	glovo_dish_id UUID UNIQUE,
-	yandex_dish_id UUID UNIQUE,
+	glovo_dish_id UUID,
+	yandex_dish_id UUID,
 
 
 	CONSTRAINT fk_dish_binding_restaurant_binding_id

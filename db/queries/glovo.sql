@@ -32,3 +32,8 @@ select * from glovo_dish;
 -- name: GetGlovoDishesForRestaurant :many
 select * from glovo_dish
 where glovo_restaurant_id = $1;
+
+-- name: GetGlovoWeightedDishesForRestaurant :many
+select * from glovo_dish
+where name ~ '[0-9]+гр'
+and glovo_restaurant_id = $1;

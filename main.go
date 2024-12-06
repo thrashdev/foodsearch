@@ -72,25 +72,27 @@ func main() {
 		UpdateBatchSize: 5,
 	}
 
-	var rowsAffected int64
-	fetcher.CreateNewGlovoRestaurants(cfg)
-	fetcher.CreateNewDishesForGlovoRestaurants(cfg)
-	// fmt.Println("Started fetching new restaurants")
-	rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
-	if err != nil {
-		log.Fatalf("Error fetching yandex restaurants: %v", err)
-	}
-	fmt.Printf("Created %v restaurants\n", rowsAffected)
-
-	rowsAffected = fetcher.CreateNewYandexDishes(cfg)
-	fmt.Printf("Created %v dishes\n", rowsAffected)
-
-	fetcher.SyncRestaurants(cfg)
+	// var rowsAffected int64
+	// fetcher.CreateNewGlovoRestaurants(cfg)
+	// fetcher.CreateNewDishesForGlovoRestaurants(cfg)
+	// // fmt.Println("Started fetching new restaurants")
+	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
+	// if err != nil {
+	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
+	// }
+	// fmt.Printf("Created %v restaurants\n", rowsAffected)
+	//
+	// rowsAffected = fetcher.CreateNewYandexDishes(cfg)
+	// fmt.Printf("Created %v dishes\n", rowsAffected)
+	//
+	// fetcher.SyncRestaurants(cfg)
+	fmt.Println("Syncing dishes")
 	fetcher.SyncDishes(cfg)
 
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 
+	fmt.Println("Listening on port: ", port)
 	server := http.Server{Handler: serveMux, Addr: ":" + port}
 	err = server.ListenAndServe()
 	if err != nil {
