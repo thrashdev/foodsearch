@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -12,6 +13,7 @@ import (
 	"github.com/thrashdev/foodsearch/internal/config"
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
+	"github.com/thrashdev/foodsearch/internal/logging"
 
 	"net/http"
 )
@@ -29,10 +31,23 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	err := godotenv.Load()
+	ex, err := os.Executable()
 	if err != nil {
 		log.Fatal(err)
 	}
+	exPath := filepath.Dir(ex)
+	logFilePath := exPath + "/log.json"
+	fmt.Println("Log filepath: ", logFilePath)
+	logger, err := logging.NewLogger(logFilePath)
+	if err != nil {
+		log.Println("Couldn't initialize logger")
+		os.Exit(1)
+	}
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	glovoSearchURL := os.Getenv("glovo_url")
 	glovoFiltersURL := os.Getenv("glovo_filters_url")
 	glovoDishURL := os.Getenv("glovo_dishes_url")
@@ -70,12 +85,13 @@ func main() {
 		},
 		DB:              *db,
 		UpdateBatchSize: 5,
+		Logger:          logger,
 	}
 
-	// var rowsAffected int64
-	// fetcher.CreateNewGlovoRestaurants(cfg)
-	// fetcher.CreateNewDishesForGlovoRestaurants(cfg)
-	// // fmt.Println("Started fetching new restaurants")
+	var rowsAffected int64
+	fetcher.CreateNewGlovoRestaurants(cfg)
+	fetcher.CreateNewDishesForGlovoRestaurants(cfg)
+	fmt.Println("Started fetching new restaurants")
 	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
 	// if err != nil {
 	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)

@@ -1,6 +1,11 @@
 package config
 
-import "github.com/thrashdev/foodsearch/internal/database"
+import (
+	"log/slog"
+
+	"github.com/thrashdev/foodsearch/internal/database"
+	"go.uber.org/zap"
+)
 
 type GlovoConfig struct {
 	SearchURL  string
@@ -24,4 +29,5 @@ type Config struct {
 	Yandex          YandexConfig
 	UpdateBatchSize int
 	DB              database.Queries
+	Logger          *zap.SugaredLogger
 }

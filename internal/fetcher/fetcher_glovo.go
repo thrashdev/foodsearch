@@ -24,6 +24,11 @@ type dishResponse struct {
 	RestaurantID uuid.UUID
 }
 
+func InitGlovo(cfg *config.Config) {
+	CreateNewGlovoRestaurants(cfg)
+	CreateNewDishesForGlovoRestaurants(cfg)
+}
+
 func restaurantDifferenceGlovo(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
 	mb := make(map[string]struct{}, len(dbrNames))
 	for _, name := range dbrNames {
@@ -263,10 +268,11 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewGlovoRestaurants(cfg *config.Config, errCh chan error) error {
+func CreateNewGlovoRestaurants(cfg *config.Config) DBActionResult {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
-		return err
+		cfg.Logger.Error()
+		return DBActionResult{}
 	}
 	log.Printf("Fetched %v restaurants from API\n", len(newRestaurants))
 	ctx := context.Background()
