@@ -25,8 +25,18 @@ type dishResponse struct {
 }
 
 func InitGlovo(cfg *config.Config) {
-	CreateNewGlovoRestaurants(cfg)
-	CreateNewDishesForGlovoRestaurants(cfg)
+	res, err := CreateNewGlovoRestaurants(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf(res.format, res.rowsAffected)
+	results, err := CreateNewDishesForGlovoRestaurants(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, v := range results {
+		fmt.Printf(v.format, v.rowsAffected)
+	}
 }
 
 func restaurantDifferenceGlovo(restaurants []models.GlovoRestaurant, dbrNames []string) []models.GlovoRestaurant {
@@ -194,7 +204,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
+func CreateNewDishesForGlovoRestaurants(cfg *config.Config) ([]DBActionResult, error) {
 	fmt.Println("Creating new dishes")
 	ctx := context.Background()
 	maxConcurrency := 2
@@ -203,7 +213,9 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
 	go utils.PrintErrors(errCh)
 	dbRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
-		return err
+		wrapped := fmt.Errorf("Couldn't get glovo restaurants: %w", err)
+		cfg.Logger.Errorw("Couldn't get glovo restaurants", "error", err)
+		return nil, wrapped
 	}
 	payloadsCh := make(chan dishResponse, len(dbRestaurants))
 	for _, dbRest := range dbRestaurants {
@@ -238,14 +250,18 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) error {
 	dishes := removeDuplicateDishes(dishesD)
 	dbApiDish_IDS, err := cfg.DB.GetGlovoDishAPI_ID(ctx)
 	if err != nil {
-		errCh <- err
+		wrapped := fmt.Errorf("Couldn't get glovo dish api IDs: %w", err)
+		cfg.Logger.Errorw("Couldn't get glovo dish api IDs", "error", err)
+		return nil, wrapped
 	}
 	dishesToAdd := dishGlovoApiIdDifference(dishes, dbApiDish_IDS)
 	fmt.Printf("New dishes: %v", len(dishesToAdd))
 	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishesToAdd, errCh)
 
-	fmt.Printf("Created %v total dishes for %v restaurants", totalDishesCreated, len(dbRestaurants))
-	return nil
+	return []DBActionResult{
+		DBActionResult{format: "Updated %v restaurants\n", rowsAffected: int64(len(dbRestaurants))},
+		DBActionResult{format: "Created %v total dishes\n", rowsAffected: int64(totalDishesCreated)},
+	}, nil
 }
 
 // TODO: implement proper error-handling with an error channel
@@ -267,18 +283,20 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 
 }
 
-// TODO: implement proper error-handling with an error channel
-func CreateNewGlovoRestaurants(cfg *config.Config) DBActionResult {
+func CreateNewGlovoRestaurants(cfg *config.Config) (DBActionResult, error) {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
-		cfg.Logger.Error()
-		return DBActionResult{}
+		wrapped := fmt.Errorf("Error while fetching glovo restaurants: %w", err)
+		cfg.Logger.Errorw("Error while fetching glovo restaurants", "error", err)
+		return DBActionResult{}, wrapped
 	}
 	log.Printf("Fetched %v restaurants from API\n", len(newRestaurants))
 	ctx := context.Background()
 	dbRestaurantNames, err := cfg.DB.GetGlovoRestaurantNames(ctx)
 	if err != nil {
-		return err
+		wrapped := fmt.Errorf("Error while fetching glovo restaurant names: %w", err)
+		cfg.Logger.Errorw("Error while fetching glovo restaurant names", "error", err)
+		return DBActionResult{}, wrapped
 	}
 	log.Printf("Fetched %v restaurants from DB\n", len(dbRestaurantNames))
 	restaurantsToAdd := restaurantDifferenceGlovo(newRestaurants, dbRestaurantNames)
@@ -291,11 +309,12 @@ func CreateNewGlovoRestaurants(cfg *config.Config) DBActionResult {
 	log.Printf("Prepared to create %v restaurants\n", len(args))
 	rowsAffected, err := cfg.DB.BatchCreateGlovoRestaurants(ctx, args)
 	if err != nil {
-		fmt.Println(fmt.Errorf("Couldn't create glovo restaurants: %w", err))
+		wrapped := fmt.Errorf("Error while posting glovo restaurants to DB: %w", err)
+		cfg.Logger.Errorw("Error while posting glovo restaurants to DB", "error", err)
+		return DBActionResult{}, wrapped
 	}
 
-	log.Printf("Created %v restaurants\n", rowsAffected)
-	return nil
+	return DBActionResult{format: "Created %v glovo restaurants\n", rowsAffected: rowsAffected}, nil
 }
 
 func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {

@@ -43,6 +43,7 @@ func main() {
 		log.Println("Couldn't initialize logger")
 		os.Exit(1)
 	}
+	defer logger.Sync()
 	err = godotenv.Load()
 	if err != nil {
 		log.Fatal(err)
@@ -88,10 +89,7 @@ func main() {
 		Logger:          logger,
 	}
 
-	var rowsAffected int64
-	fetcher.CreateNewGlovoRestaurants(cfg)
-	fetcher.CreateNewDishesForGlovoRestaurants(cfg)
-	fmt.Println("Started fetching new restaurants")
+	fetcher.InitGlovo(cfg)
 	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
 	// if err != nil {
 	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
@@ -102,9 +100,9 @@ func main() {
 	// fmt.Printf("Created %v dishes\n", rowsAffected)
 	//
 	// fetcher.SyncRestaurants(cfg)
-	fmt.Println("Syncing dishes")
-	fetcher.SyncDishes(cfg)
-
+	// fmt.Println("Syncing dishes")
+	// fetcher.SyncDishes(cfg)
+	//
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 

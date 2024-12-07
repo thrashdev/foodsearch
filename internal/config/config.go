@@ -1,8 +1,6 @@
 package config
 
 import (
-	"log/slog"
-
 	"github.com/thrashdev/foodsearch/internal/database"
 	"go.uber.org/zap"
 )
