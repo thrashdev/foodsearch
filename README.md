@@ -1,4 +1,4 @@
-# foodsearch
+# foodsearch-service
 This app aggregates the offerings of food delivery apps in Bishkek, Kyrgyzstan and allows you to search through them and get a better deal.
 
 ## Contributing
