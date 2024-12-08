@@ -14,6 +14,7 @@ import (
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/fetcher"
 	"github.com/thrashdev/foodsearch/internal/logging"
+	"github.com/thrashdev/foodsearch/internal/utils"
 
 	"net/http"
 )
@@ -24,7 +25,7 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := responseReady{"OK"}
-	err := respondWithJSON(w, 200, resp)
+	err := utils.RespondWithJSON(w, 200, resp)
 	if err != nil {
 		log.Println("Server failed on checking readiness")
 	}
@@ -49,7 +50,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	glovoSearchURL := os.Getenv("glovo_url")
+	glovoSearchURL := os.Getenv("glovo_search_url")
 	glovoFiltersURL := os.Getenv("glovo_filters_url")
 	glovoDishURL := os.Getenv("glovo_dishes_url")
 	yandexSearchURL := os.Getenv("yandex_search_url")
@@ -90,7 +91,7 @@ func main() {
 	}
 
 	// fetcher.InitGlovo(cfg)
-	fetcher.InitYandex(cfg)
+	// fetcher.InitYandex(cfg)
 	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
 	// if err != nil {
 	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
@@ -100,9 +101,9 @@ func main() {
 	// rowsAffected = fetcher.CreateNewYandexDishes(cfg)
 	// fmt.Printf("Created %v dishes\n", rowsAffected)
 	//
-	// fetcher.SyncRestaurants(cfg)
-	// fmt.Println("Syncing dishes")
-	// fetcher.SyncDishes(cfg)
+	fetcher.SyncRestaurants(cfg)
+	fmt.Println("Syncing dishes")
+	fetcher.SyncDishes(cfg)
 	//
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)

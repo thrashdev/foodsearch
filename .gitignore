@@ -1,5 +1,7 @@
 notes.md
-.env
+*.env
 set_db.sh
 log.json
 foodsearch
+foodsearch-service
+foodsearch-api

@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +14,30 @@ import (
 	"github.com/thrashdev/foodsearch/internal/database"
 	"github.com/thrashdev/foodsearch/internal/models"
 )
+
+func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) error {
+	resp, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("Error while writing response :%w", err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(resp)
+	return nil
+}
+
+func RespondWithError(w http.ResponseWriter, code int, msg string) error {
+	type errResponse struct {
+		Error string `json:"error"`
+	}
+
+	resp := errResponse{msg}
+	err := RespondWithJSON(w, code, resp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func FloatToNumeric(number float64) (value pgtype.Numeric) {
 	parsed := strconv.FormatFloat(number, 'f', -1, 64)
