@@ -48,6 +48,23 @@ const search_url_slug_token = "{restaurant_slug}"
 const search_url_longitude_token = "{longitude}"
 const search_url_latitude_token = "{latitude}"
 
+type startupCommand func(*config.Config) (DBActionResult, error)
+
+func InitYandex(cfg *config.Config) {
+	startupCommands := []startupCommand{
+		CreateNewYandexRestaurants,
+		CreateNewYandexDishes,
+	}
+
+	for _, cmd := range startupCommands {
+		res, err := cmd(cfg)
+		if err != nil {
+			cfg.Logger.DPanic("Error during yandex startup", "error", err)
+		}
+		res.print()
+	}
+}
+
 func restaurantDifferenceYandex(restaurants []models.YandexRestaurant, slugs []string) []models.YandexRestaurant {
 	mb := make(map[string]struct{}, len(slugs))
 	for _, slug := range slugs {
@@ -105,18 +122,18 @@ func dishYandexApiIdDifference(dishes []models.YandexDish, ids []int32) []models
 	return uniqueDishes
 }
 
-func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
+func CreateNewYandexRestaurants(cfg *config.Config) (DBActionResult, error) {
 	ctx := context.Background()
 	filters, err := cfg.DB.GetYandexFilters(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't fetch yandex filters, err: %v", err)
+		return DBActionResult{}, fmt.Errorf("Couldn't fetch yandex filters, err: %w", err)
 	}
 
 	restsWithDuplicates := []models.YandexRestaurant{}
 	for _, f := range filters {
 		rests, err := FetchYandexRestaurants(cfg, f)
 		if err != nil {
-			log.Printf("Error encountered while fetching restaurants :%v", err)
+			cfg.Logger.Warnf("Error encountered while fetching yandex restaurants by filter: %v, err: %v", f, err)
 			continue
 		}
 		restsWithDuplicates = append(restsWithDuplicates, rests...)
@@ -124,15 +141,15 @@ func CreateNewYandexRestaurants(cfg *config.Config) (rowsAffected int64) {
 
 	slugs, err := cfg.DB.GetYandexRestaurantSlugs(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't fetch yandex restaurant slugs, err: %v", err)
+		return DBActionResult{}, fmt.Errorf("Couldn't fetch yandex restaurant slugs, err: %w", err)
 	}
 	rests := removeDuplicateYandexRestaurants(restsWithDuplicates)
 	newRests := restaurantDifferenceYandex(rests, slugs)
-	rowsAffected, err = createYandexRestaurants(cfg, newRests)
+	rowsAffected, err := createYandexRestaurants(cfg, newRests)
 	if err != nil {
-		log.Fatalln(err)
+		return DBActionResult{}, fmt.Errorf("Couldn't post yandex restaurants to DB: %w", err)
 	}
-	return rowsAffected
+	return makeDBActionResult("Created %v new yandex restaurants", rowsAffected), nil
 
 }
 
@@ -152,12 +169,11 @@ func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant
 
 }
 
-// TODO: Move IO out of this function
-func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
+func CreateNewYandexDishes(cfg *config.Config) (DBActionResult, error) {
 	ctx := context.Background()
 	rests, err := cfg.DB.GetAllYandexRestaurants(ctx)
 	if err != nil {
-		log.Fatalf("Error fetching yandex restaurants from DB: %v", err)
+		return DBActionResult{}, fmt.Errorf("Error fetching yandex restaurants from DB: %w", err)
 	}
 
 	dishesResp := []models.YandexDish{}
@@ -169,19 +185,23 @@ func CreateNewYandexDishes(cfg *config.Config) (rowsAffected int64) {
 	dedupedDishes := removeDuplicateYandexDishes(dishesResp)
 	yandexApiIDS, err := cfg.DB.GetYandexDishApiIDS(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't fetch yandex api ids from DB")
+		return DBActionResult{}, fmt.Errorf("Couldn't fetch yandex api ids from DB")
 	}
 	dishes := dishYandexApiIdDifference(dedupedDishes, yandexApiIDS)
 
-	rowsAffected, err = createYandexDishes(cfg, dishes)
+	rowsAffected, err := postYandexDishesToDB(cfg, dishes)
 	if err != nil {
-		log.Fatalf("Couldn't create new yandex dishes, %v", err)
+		return DBActionResult{}, fmt.Errorf("Couldn't post new yandex dishes to DB, %v", err)
 	}
-	return rowsAffected
+	return makeDBActionResult("Created %v new dishes", rowsAffected), nil
 
 }
 
-func createYandexDishes(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
+func createNewYandexDishes(cfg *config.Config, restID uuid.UUID) {
+
+}
+
+func postYandexDishesToDB(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexDishesParams{}
 	for _, d := range dishes {
 		arg := utils.YandexDishModelToDB(d)

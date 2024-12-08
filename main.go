@@ -89,7 +89,8 @@ func main() {
 		Logger:          logger,
 	}
 
-	fetcher.InitGlovo(cfg)
+	// fetcher.InitGlovo(cfg)
+	fetcher.InitYandex(cfg)
 	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
 	// if err != nil {
 	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
