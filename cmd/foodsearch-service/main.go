@@ -89,21 +89,12 @@ func main() {
 		UpdateBatchSize: 5,
 		Logger:          logger,
 	}
-
+	fetcher.Init(cfg)
 	// fetcher.InitGlovo(cfg)
 	// fetcher.InitYandex(cfg)
-	// rowsAffected = fetcher.CreateNewYandexRestaurants(cfg)
-	// if err != nil {
-	// 	log.Fatalf("Error fetching yandex restaurants: %v", err)
-	// }
-	// fmt.Printf("Created %v restaurants\n", rowsAffected)
-	//
-	// rowsAffected = fetcher.CreateNewYandexDishes(cfg)
-	// fmt.Printf("Created %v dishes\n", rowsAffected)
-	//
-	fetcher.SyncRestaurants(cfg)
-	fmt.Println("Syncing dishes")
-	fetcher.SyncDishes(cfg)
+	// fetcher.SyncRestaurants(cfg)
+	// fmt.Println("Syncing dishes")
+	// fetcher.SyncDishes(cfg)
 	//
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)

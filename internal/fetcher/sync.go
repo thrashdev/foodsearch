@@ -114,7 +114,7 @@ func makeDishBinding(rbID, gdishID, ydishID uuid.UUID) (models.DishBinding, erro
 	}, nil
 }
 
-func SyncRestaurants(cfg *config.Config) {
+func SyncRestaurants(cfg *config.Config) (DBActionResult, error) {
 	ctx := context.Background()
 	glovoRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
@@ -158,17 +158,20 @@ func SyncRestaurants(cfg *config.Config) {
 
 	rowsAffected, err := cfg.DB.BatchCreateRestaurantBinding(context.Background(), args)
 	if err != nil {
-		log.Fatalf("Couldn't create restaurant bindings in DB: %v", err)
+		return DBActionResult{}, fmt.Errorf("Couldn't create restaurant bindings in DB: %w", err)
 	}
-	fmt.Printf("Created %v restaurant bindings", rowsAffected)
+	result := DBActionResult{}
+	result.records = append(result.records, makeDBActionResultRecord("Created %v restaurant bindings", rowsAffected))
+	return result, nil
 
 }
 
-func SyncDishes(cfg *config.Config) (rowsAffected int64) {
+func SyncDishes(cfg *config.Config) (DBActionResult, error) {
+	var rowsAffected int64
 	ctx := context.Background()
 	restaurantBindings, err := cfg.DB.GetRestaurantBindingsToUpdate(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return DBActionResult{}, err
 	}
 
 	for _, rb := range restaurantBindings {
@@ -176,8 +179,9 @@ func SyncDishes(cfg *config.Config) (rowsAffected int64) {
 		rowsAffected += res
 	}
 
-	fmt.Printf("Created %v dishes\n", rowsAffected)
-	return rowsAffected
+	result := DBActionResult{}
+	result.records = append(result.records, makeDBActionResultRecord("Created %v dishes", rowsAffected))
+	return result, nil
 
 }
 

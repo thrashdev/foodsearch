@@ -25,17 +25,16 @@ type dishResponse struct {
 }
 
 func InitGlovo(cfg *config.Config) {
-	res, err := CreateNewGlovoRestaurants(cfg)
-	if err != nil {
-		cfg.Logger.DPanic(err)
+	startupCommands := []startupCommand{
+		CreateNewGlovoRestaurants,
+		CreateNewDishesForGlovoRestaurants,
 	}
-	fmt.Printf(res.format, res.rowsAffected)
-	results, err := CreateNewDishesForGlovoRestaurants(cfg)
-	if err != nil {
-		cfg.Logger.DPanic(err)
-	}
-	for _, v := range results {
-		fmt.Printf(v.format, v.rowsAffected)
+	for _, cmd := range startupCommands {
+		res, err := cmd(cfg)
+		if err != nil {
+			cfg.Logger.DPanic(err)
+		}
+		res.print()
 	}
 }
 
@@ -204,7 +203,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewDishesForGlovoRestaurants(cfg *config.Config) ([]DBActionResult, error) {
+func CreateNewDishesForGlovoRestaurants(cfg *config.Config) (DBActionResult, error) {
 	fmt.Println("Creating new dishes")
 	ctx := context.Background()
 	maxConcurrency := 2
@@ -214,7 +213,7 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) ([]DBActionResult, e
 	dbRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
 		wrapped := fmt.Errorf("Couldn't get glovo restaurants: %w", err)
-		return nil, wrapped
+		return DBActionResult{}, wrapped
 	}
 	payloadsCh := make(chan dishResponse, len(dbRestaurants))
 	for _, dbRest := range dbRestaurants {
@@ -250,16 +249,18 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) ([]DBActionResult, e
 	dbApiDish_IDS, err := cfg.DB.GetGlovoDishAPI_ID(ctx)
 	if err != nil {
 		wrapped := fmt.Errorf("Couldn't get glovo dish api IDs: %w", err)
-		return nil, wrapped
+		return DBActionResult{}, wrapped
 	}
 	dishesToAdd := dishGlovoApiIdDifference(dishes, dbApiDish_IDS)
 	fmt.Printf("New dishes: %v", len(dishesToAdd))
 	totalDishesCreated := createNewDishesForGlovoRestaurant(cfg, dishesToAdd, errCh)
 
-	return []DBActionResult{
-		DBActionResult{format: "Updated %v restaurants\n", rowsAffected: int64(len(dbRestaurants))},
-		DBActionResult{format: "Created %v total dishes\n", rowsAffected: int64(totalDishesCreated)},
-	}, nil
+	result := DBActionResult{}
+	result.records = []DBActionResultRecord{
+		makeDBActionResultRecord("Updated %v restaurants", int64(len(dbRestaurants))),
+		makeDBActionResultRecord("Created %v total dishes", int64(totalDishesCreated)),
+	}
+	return result, nil
 }
 
 // TODO: implement proper error-handling with an error channel
@@ -309,7 +310,9 @@ func CreateNewGlovoRestaurants(cfg *config.Config) (DBActionResult, error) {
 		return DBActionResult{}, wrapped
 	}
 
-	return DBActionResult{format: "Created %v glovo restaurants\n", rowsAffected: rowsAffected}, nil
+	result := DBActionResult{}
+	result.records = append(result.records, makeDBActionResultRecord("Created %v glovo restaurants", rowsAffected))
+	return result, nil
 }
 
 func fetchGlovoRestaurants(searchURL string, filtersURL string) (allRestaurants []models.GlovoRestaurant, err error) {

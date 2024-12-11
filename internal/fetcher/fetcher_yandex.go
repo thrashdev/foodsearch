@@ -48,8 +48,6 @@ const search_url_slug_token = "{restaurant_slug}"
 const search_url_longitude_token = "{longitude}"
 const search_url_latitude_token = "{latitude}"
 
-type startupCommand func(*config.Config) (DBActionResult, error)
-
 func InitYandex(cfg *config.Config) {
 	startupCommands := []startupCommand{
 		CreateNewYandexRestaurants,
@@ -149,7 +147,9 @@ func CreateNewYandexRestaurants(cfg *config.Config) (DBActionResult, error) {
 	if err != nil {
 		return DBActionResult{}, fmt.Errorf("Couldn't post yandex restaurants to DB: %w", err)
 	}
-	return makeDBActionResult("Created %v new yandex restaurants", rowsAffected), nil
+	result := DBActionResult{}
+	result.records = append(result.records, makeDBActionResultRecord("Created %v new yandex restaurants", rowsAffected))
+	return result, nil
 
 }
 
@@ -193,7 +193,9 @@ func CreateNewYandexDishes(cfg *config.Config) (DBActionResult, error) {
 	if err != nil {
 		return DBActionResult{}, fmt.Errorf("Couldn't post new yandex dishes to DB, %v", err)
 	}
-	return makeDBActionResult("Created %v new dishes", rowsAffected), nil
+	result := DBActionResult{}
+	result.records = append(result.records, makeDBActionResultRecord("Created %v new dishes", rowsAffected))
+	return result, nil
 
 }
 
