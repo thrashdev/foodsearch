@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -294,4 +295,13 @@ func SliceContains[S []K, K comparable](collection S, element K) bool {
 	}
 
 	return false
+}
+
+func GetTwoDirsUp(dir string) string {
+	for i := 0; i < 2; i++ {
+		abs := filepath.Base(dir)
+		fmt.Println("ABS: ", abs)
+		dir = strings.Replace(dir, string(filepath.Separator)+abs, "", 1)
+	}
+	return dir
 }

@@ -37,6 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 	exPath := filepath.Dir(ex)
+	envDir := utils.GetTwoDirsUp(exPath)
 	logFilePath := exPath + "/log.json"
 	fmt.Println("Log filepath: ", logFilePath)
 	logger, err := logging.NewLogger(logFilePath)
@@ -45,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer logger.Sync()
-	err = godotenv.Load()
+	err = godotenv.Load(envDir + string(filepath.Separator) + ".env")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,12 +91,6 @@ func main() {
 		Logger:          logger,
 	}
 	fetcher.Init(cfg)
-	// fetcher.InitGlovo(cfg)
-	// fetcher.InitYandex(cfg)
-	// fetcher.SyncRestaurants(cfg)
-	// fmt.Println("Syncing dishes")
-	// fetcher.SyncDishes(cfg)
-	//
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /v1/healthz", handlerReadiness)
 
