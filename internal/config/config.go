@@ -22,7 +22,7 @@ type YandexLocation struct {
 	Latitude  float64 `json:"latitude"`
 }
 
-type Config struct {
+type ServiceConfig struct {
 	Glovo           GlovoConfig
 	Yandex          YandexConfig
 	UpdateBatchSize int

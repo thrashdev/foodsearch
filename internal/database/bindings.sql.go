@@ -48,6 +48,74 @@ func (q *Queries) GetAllRestaurantBindings(ctx context.Context) ([]RestaurantBin
 	return items, nil
 }
 
+const getAllRestaurants = `-- name: GetAllRestaurants :many
+select rb.ID, g.id, g.name, g.address, g.delivery_fee, g.phone_number, g.glovo_api_store_id, g.glovo_api_address_id, g.glovo_api_slug, g.created_at, g.updated_at, y.id, y.name, y.address, y.delivery_fee, y.phone_number, y.yandex_api_slug, y.created_at, y.updated_at from restaurant_binding rb
+left join glovo_restaurant g on rb.glovo_restaurant_id = g.id
+left join yandex_restaurant y on rb.yandex_restaurant_id = y.id
+`
+
+type GetAllRestaurantsRow struct {
+	ID                pgtype.UUID
+	ID_2              pgtype.UUID
+	Name              pgtype.Text
+	Address           pgtype.Text
+	DeliveryFee       pgtype.Numeric
+	PhoneNumber       pgtype.Text
+	GlovoApiStoreID   pgtype.Int4
+	GlovoApiAddressID pgtype.Int4
+	GlovoApiSlug      pgtype.Text
+	CreatedAt         pgtype.Timestamp
+	UpdatedAt         pgtype.Timestamp
+	ID_3              pgtype.UUID
+	Name_2            pgtype.Text
+	Address_2         pgtype.Text
+	DeliveryFee_2     pgtype.Numeric
+	PhoneNumber_2     pgtype.Text
+	YandexApiSlug     pgtype.Text
+	CreatedAt_2       pgtype.Timestamp
+	UpdatedAt_2       pgtype.Timestamp
+}
+
+func (q *Queries) GetAllRestaurants(ctx context.Context) ([]GetAllRestaurantsRow, error) {
+	rows, err := q.db.Query(ctx, getAllRestaurants)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllRestaurantsRow
+	for rows.Next() {
+		var i GetAllRestaurantsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ID_2,
+			&i.Name,
+			&i.Address,
+			&i.DeliveryFee,
+			&i.PhoneNumber,
+			&i.GlovoApiStoreID,
+			&i.GlovoApiAddressID,
+			&i.GlovoApiSlug,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ID_3,
+			&i.Name_2,
+			&i.Address_2,
+			&i.DeliveryFee_2,
+			&i.PhoneNumber_2,
+			&i.YandexApiSlug,
+			&i.CreatedAt_2,
+			&i.UpdatedAt_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRestaurantBindingsToUpdate = `-- name: GetRestaurantBindingsToUpdate :many
 select distinct rb.id, rb.glovo_restaurant_id, rb.yandex_restaurant_id from restaurant_binding rb
 left join dish_binding db on rb.id = db.restaurant_binding_id

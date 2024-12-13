@@ -19,7 +19,7 @@ func makeDBActionResultRecord(format string, rowsAffected int64) DBActionResultR
 	return DBActionResultRecord{format: format + "\n", rowsAffected: rowsAffected}
 }
 
-type startupCommand func(*config.Config) (DBActionResult, error)
+type startupCommand func(*config.ServiceConfig) (DBActionResult, error)
 
 func (dbAR *DBActionResult) print() {
 	for _, i := range dbAR.records {

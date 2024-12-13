@@ -48,7 +48,7 @@ const search_url_slug_token = "{restaurant_slug}"
 const search_url_longitude_token = "{longitude}"
 const search_url_latitude_token = "{latitude}"
 
-func InitYandex(cfg *config.Config) {
+func InitYandex(cfg *config.ServiceConfig) {
 	startupCommands := []startupCommand{
 		CreateNewYandexRestaurants,
 		CreateNewYandexDishes,
@@ -120,7 +120,7 @@ func dishYandexApiIdDifference(dishes []models.YandexDish, ids []int32) []models
 	return uniqueDishes
 }
 
-func CreateNewYandexRestaurants(cfg *config.Config) (DBActionResult, error) {
+func CreateNewYandexRestaurants(cfg *config.ServiceConfig) (DBActionResult, error) {
 	ctx := context.Background()
 	filters, err := cfg.DB.GetYandexFilters(ctx)
 	if err != nil {
@@ -153,7 +153,7 @@ func CreateNewYandexRestaurants(cfg *config.Config) (DBActionResult, error) {
 
 }
 
-func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
+func createYandexRestaurants(cfg *config.ServiceConfig, rests []models.YandexRestaurant) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexRestaurantsParams{}
 	for _, r := range rests {
 		arg := utils.YandexRestModelToDB(r)
@@ -169,7 +169,7 @@ func createYandexRestaurants(cfg *config.Config, rests []models.YandexRestaurant
 
 }
 
-func CreateNewYandexDishes(cfg *config.Config) (DBActionResult, error) {
+func CreateNewYandexDishes(cfg *config.ServiceConfig) (DBActionResult, error) {
 	ctx := context.Background()
 	rests, err := cfg.DB.GetAllYandexRestaurants(ctx)
 	if err != nil {
@@ -199,11 +199,11 @@ func CreateNewYandexDishes(cfg *config.Config) (DBActionResult, error) {
 
 }
 
-func createNewYandexDishes(cfg *config.Config, restID uuid.UUID) {
+func createNewYandexDishes(cfg *config.ServiceConfig, restID uuid.UUID) {
 
 }
 
-func postYandexDishesToDB(cfg *config.Config, dishes []models.YandexDish) (rowsAffected int64, err error) {
+func postYandexDishesToDB(cfg *config.ServiceConfig, dishes []models.YandexDish) (rowsAffected int64, err error) {
 	args := []database.BatchCreateYandexDishesParams{}
 	for _, d := range dishes {
 		arg := utils.YandexDishModelToDB(d)
@@ -217,7 +217,7 @@ func postYandexDishesToDB(cfg *config.Config, dishes []models.YandexDish) (rowsA
 	return rowsAffected, nil
 }
 
-func FetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants []models.YandexRestaurant, err error) {
+func FetchYandexRestaurants(cfg *config.ServiceConfig, filter string) (allRestaurants []models.YandexRestaurant, err error) {
 	query := YandexSearchQuery{Text: filter,
 		Filters:  []YandexSearchFilter{YandexSearchFilter{Type: search_type, Slug: search_slug}},
 		Selector: "all",
@@ -287,7 +287,7 @@ func FetchYandexRestaurants(cfg *config.Config, filter string) (allRestaurants [
 	return allRestaurants, nil
 }
 
-func FetchYandexDishes(cfg *config.Config, rest models.YandexRestaurant) []models.YandexDish {
+func FetchYandexDishes(cfg *config.ServiceConfig, rest models.YandexRestaurant) []models.YandexDish {
 	url := strings.Replace(cfg.Yandex.RestaurantMenuURL, search_url_slug_token, rest.YandexApiSlug, 1)
 	url = strings.Replace(url, search_url_latitude_token, strconv.FormatFloat(cfg.Yandex.Loc.Latitude, 'f', -1, 64), 1)
 	url = strings.Replace(url, search_url_longitude_token, strconv.FormatFloat(cfg.Yandex.Loc.Longitude, 'f', -1, 64), 1)

@@ -66,7 +66,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't parse latitude: %v", err)
 	}
-	port := os.Getenv("PORT")
+	port := os.Getenv("SERVICE_PORT")
 	connection_string := os.Getenv("connection_string")
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, connection_string)
@@ -75,7 +75,7 @@ func main() {
 	}
 	defer conn.Close(ctx)
 	db := database.New(conn)
-	cfg := &config.Config{
+	cfg := &config.ServiceConfig{
 		Glovo: config.GlovoConfig{
 			SearchURL:  glovoSearchURL,
 			FiltersURL: glovoFiltersURL,

@@ -24,7 +24,7 @@ type dishResponse struct {
 	RestaurantID uuid.UUID
 }
 
-func InitGlovo(cfg *config.Config) {
+func InitGlovo(cfg *config.ServiceConfig) {
 	startupCommands := []startupCommand{
 		CreateNewGlovoRestaurants,
 		CreateNewDishesForGlovoRestaurants,
@@ -203,7 +203,7 @@ func fetchGlovoRestaurantsByFilter(baseURL string, filter string) (restaurants [
 }
 
 // TODO: implement proper error-handling with an error channel
-func CreateNewDishesForGlovoRestaurants(cfg *config.Config) (DBActionResult, error) {
+func CreateNewDishesForGlovoRestaurants(cfg *config.ServiceConfig) (DBActionResult, error) {
 	fmt.Println("Creating new dishes")
 	ctx := context.Background()
 	maxConcurrency := 2
@@ -264,7 +264,7 @@ func CreateNewDishesForGlovoRestaurants(cfg *config.Config) (DBActionResult, err
 }
 
 // TODO: implement proper error-handling with an error channel
-func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.GlovoDish, errCh chan error) (dishesCreated int) {
+func createNewDishesForGlovoRestaurant(cfg *config.ServiceConfig, dishes []models.GlovoDish, errCh chan error) (dishesCreated int) {
 	ctx := context.Background()
 	args := []database.BatchCreateGlovoDishesParams{}
 	for _, dish := range dishes {
@@ -282,7 +282,7 @@ func createNewDishesForGlovoRestaurant(cfg *config.Config, dishes []models.Glovo
 
 }
 
-func CreateNewGlovoRestaurants(cfg *config.Config) (DBActionResult, error) {
+func CreateNewGlovoRestaurants(cfg *config.ServiceConfig) (DBActionResult, error) {
 	newRestaurants, err := fetchGlovoRestaurants(cfg.Glovo.SearchURL, cfg.Glovo.FiltersURL)
 	if err != nil {
 		wrapped := fmt.Errorf("Error while fetching glovo restaurants: %w", err)

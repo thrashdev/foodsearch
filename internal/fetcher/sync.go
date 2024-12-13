@@ -114,7 +114,7 @@ func makeDishBinding(rbID, gdishID, ydishID uuid.UUID) (models.DishBinding, erro
 	}, nil
 }
 
-func SyncRestaurants(cfg *config.Config) (DBActionResult, error) {
+func SyncRestaurants(cfg *config.ServiceConfig) (DBActionResult, error) {
 	ctx := context.Background()
 	glovoRestaurants, err := cfg.DB.GetAllGlovoRestaurants(ctx)
 	if err != nil {
@@ -166,7 +166,7 @@ func SyncRestaurants(cfg *config.Config) (DBActionResult, error) {
 
 }
 
-func SyncDishes(cfg *config.Config) (DBActionResult, error) {
+func SyncDishes(cfg *config.ServiceConfig) (DBActionResult, error) {
 	var rowsAffected int64
 	ctx := context.Background()
 	restaurantBindings, err := cfg.DB.GetRestaurantBindingsToUpdate(ctx)
@@ -185,7 +185,7 @@ func SyncDishes(cfg *config.Config) (DBActionResult, error) {
 
 }
 
-func syncDishes(cfg *config.Config, rb database.RestaurantBinding) int64 {
+func syncDishes(cfg *config.ServiceConfig, rb database.RestaurantBinding) int64 {
 	fmt.Printf("CREATING DISHES FOR %v\n", uuid.UUID(rb.ID.Bytes))
 	ctx := context.Background()
 	glovoDishes := []models.GlovoDish{}

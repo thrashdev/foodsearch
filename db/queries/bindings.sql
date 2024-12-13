@@ -13,3 +13,8 @@ where db.id is NULL;
 -- name: BatchCreateDishBindings :copyfrom
 INSERT INTO dish_binding(id, restaurant_binding_id, glovo_dish_id, yandex_dish_id)
 VALUES ($1, $2, $3, $4);
+
+-- name: GetAllRestaurants :many
+select rb.ID, g.*, y.* from restaurant_binding rb
+left join glovo_restaurant g on rb.glovo_restaurant_id = g.id
+left join yandex_restaurant y on rb.yandex_restaurant_id = y.id;
